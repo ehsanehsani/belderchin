@@ -1,0 +1,106 @@
+{
+  "questionTemplates": [
+    {
+      "id": "fill_blank_template",
+      "type": "fill_blank",
+      "name": "Fill in the Blank",
+      "description": "Single blank space with multiple choice options",
+      "aiPrompt": "Create a fill-in-the-blank question with the following structure:\n- Farsi sentence: {farsi}\n- English sentence with one blank (_____): {english}\n- 3-4 multiple choice options\n- Correct answer\n- Difficulty level: {difficulty}\n- Topic: {topic}",
+      "example": {
+        "farsi": "من به هوای سرد عادت دارم",
+        "english": "I _____ cold weather",
+        "options": ["am used to", "used to", "am getting used to"],
+        "correctAnswer": "am used to"
+      }
+    },
+    {
+      "id": "multiple_blank_template",
+      "type": "multiple_blank",
+      "name": "Multiple Blanks",
+      "description": "Multiple blank spaces in one sentence",
+      "aiPrompt": "Create a multiple-blank question with the following structure:\n- Farsi sentence: {farsi}\n- English sentence with multiple blanks (_____): {english}\n- For each blank, provide 3-4 options\n- Correct answers for each blank\n- Difficulty level: {difficulty}\n- Topic: {topic}",
+      "example": {
+        "farsi": "من قبلاً هر روز ورزش می‌کردم اما الان به کار کردن عادت دارم",
+        "english": "I _____ exercise every day, but now I _____ working",
+        "blanks": [
+          {
+            "options": ["used to", "am used to", "get used to"],
+            "correctAnswer": "used to"
+          },
+          {
+            "options": ["used to", "am used to", "get used to"],
+            "correctAnswer": "am used to"
+          }
+        ]
+      }
+    },
+    {
+      "id": "word_order_template",
+      "type": "word_order",
+      "name": "Word Order",
+      "description": "Arrange words to form a correct sentence",
+      "aiPrompt": "Create a word order question with the following structure:\n- Farsi sentence: {farsi}\n- Correct English sentence: {english}\n- Shuffle the words from the English sentence\n- Provide the correct order\n- Difficulty level: {difficulty}\n- Topic: {topic}",
+      "example": {
+        "farsi": "آیا شما قبلاً به اینجا می‌آمدید؟",
+        "english": "Did you used to come here?",
+        "shuffledWords": ["you", "Did", "here", "come", "used", "to", "?"],
+        "correctOrder": ["Did", "you", "used", "to", "come", "here", "?"]
+      }
+    },
+    {
+      "id": "multiple_choice_template",
+      "type": "multiple_choice",
+      "name": "Multiple Choice",
+      "description": "Choose the best answer from multiple options",
+      "aiPrompt": "Create a multiple choice question with the following structure:\n- Farsi context: {farsi}\n- English question: {question}\n- 4 multiple choice options\n- Correct answer\n- Difficulty level: {difficulty}\n- Topic: {topic}",
+      "example": {
+        "farsi": "من به هوای سرد عادت دارم",
+        "question": "What does 'am used to' mean in this context?",
+        "options": [
+          "I did this in the past",
+          "I am familiar with this",
+          "I will do this in the future",
+          "I don't like this"
+        ],
+        "correctAnswer": "I am familiar with this"
+      }
+    },
+    {
+      "id": "true_false_template",
+      "type": "true_false",
+      "name": "True/False",
+      "description": "Determine if a statement is true or false",
+      "aiPrompt": "Create a true/false question with the following structure:\n- Farsi context: {farsi}\n- English statement: {statement}\n- Determine if the statement is true or false\n- Difficulty level: {difficulty}\n- Topic: {topic}",
+      "example": {
+        "farsi": "من به هوای سرد عادت دارم",
+        "statement": "'Am used to' means the same as 'used to'",
+        "correctAnswer": false
+      }
+    },
+    {
+      "id": "matching_template",
+      "type": "matching",
+      "name": "Matching",
+      "description": "Match Farsi phrases with English translations",
+      "aiPrompt": "Create a matching question with the following structure:\n- Topic: {topic}\n- 4-6 pairs of Farsi and English phrases\n- Shuffle the English phrases\n- Difficulty level: {difficulty}",
+      "example": {
+        "pairs": [
+          {
+            "left": "من به هوای سرد عادت دارم",
+            "right": "I am used to cold weather"
+          },
+          {
+            "left": "او قبلاً اینجا زندگی می‌کرد",
+            "right": "He used to live here"
+          }
+        ],
+        "shuffledRight": ["He used to live here", "I am used to cold weather"]
+      }
+    }
+  ],
+  "aiPrompts": {
+    "generateQuestions": "Based on the podcast episode about '{topic}', generate {count} {type} questions for English learners. Each question should:\n1. Have a Farsi sentence for context\n2. Test understanding of '{topic}'\n3. Be at {difficulty} level\n4. Include clear explanations\n5. Use relevant vocabulary\n\nReturn the questions in JSON format matching the {type} template.",
+    "validateQuestions": "Review these English learning questions for:\n1. Grammar accuracy\n2. Appropriate difficulty level\n3. Clear explanations\n4. Cultural sensitivity\n5. Educational value\n\nProvide feedback and suggest improvements.",
+    "adaptDifficulty": "Adapt these questions from {currentLevel} to {targetLevel} level:\n1. Simplify or complexify vocabulary\n2. Adjust sentence structure\n3. Modify explanations\n4. Maintain educational value\n\nReturn adapted questions in JSON format."
+  }
+}

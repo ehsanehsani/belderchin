@@ -1,0 +1,81 @@
+{
+  "id": "episode-15",
+  "title": "Episode 15: Used To",
+  "description": "Learn about 'used to' vs 'be used to' - expressing past habits and present adaptation",
+  "isActive": true,
+  "metadata": {
+    "episodeNumber": 15,
+    "topic": "Used To",
+    "level": "intermediate",
+    "duration": "15 minutes",
+    "createdAt": "2024-01-15",
+    "updatedAt": "2024-01-15"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "fill_blank",
+      "farsi": "من به هوای سرد عادت دارم",
+      "english": "I _____ cold weather",
+      "options": ["am used to", "used to", "am getting used to"],
+      "correctAnswer": "am used to",
+      "difficulty": "medium",
+      "tags": ["used to", "be used to", "weather", "present habits"],
+      "explanation": "Use 'am used to' for present habits and adaptation"
+    },
+    {
+      "id": "q2",
+      "type": "fill_blank",
+      "farsi": "او قبلاً اینجا زندگی می‌کرد",
+      "english": "He _____ live here",
+      "options": ["used to", "is used to", "was used to"],
+      "correctAnswer": "used to",
+      "difficulty": "medium",
+      "tags": ["used to", "past habits", "living"],
+      "explanation": "Use 'used to' for past habits that no longer exist"
+    },
+    {
+      "id": "q3",
+      "type": "fill_blank",
+      "farsi": "آیا شما به کار کردن در شب عادت دارید؟",
+      "english": "Are you _____ working at night?",
+      "options": ["used to", "use to", "get used to"],
+      "correctAnswer": "used to",
+      "difficulty": "medium",
+      "tags": ["used to", "be used to", "working", "night"],
+      "explanation": "Use 'used to' after 'be' to ask about present adaptation"
+    },
+    {
+      "id": "q4",
+      "type": "multiple_blank",
+      "farsi": "من قبلاً هر روز ورزش می‌کردم اما الان به کار کردن عادت دارم",
+      "english": "I _____ exercise every day, but now I _____ working",
+      "blanks": [
+        {
+          "id": "blank1",
+          "options": ["used to", "am used to", "get used to"],
+          "correctAnswer": "used to"
+        },
+        {
+          "id": "blank2",
+          "options": ["used to", "am used to", "get used to"],
+          "correctAnswer": "am used to"
+        }
+      ],
+      "difficulty": "hard",
+      "tags": ["used to", "be used to", "exercise", "working", "comparison"],
+      "explanation": "First blank: past habit (used to). Second blank: present adaptation (am used to)"
+    },
+    {
+      "id": "q5",
+      "type": "word_order",
+      "farsi": "آیا شما قبلاً به اینجا می‌آمدید؟",
+      "english": "Did you used to come here?",
+      "shuffledWords": ["you", "Did", "here", "come", "used", "to", "?"],
+      "correctOrder": ["Did", "you", "used", "to", "come", "here", "?"],
+      "difficulty": "medium",
+      "tags": ["used to", "word order", "questions", "past habits"],
+      "explanation": "In questions with 'used to', use 'Did + subject + used to + verb'"
+    }
+  ]
+}

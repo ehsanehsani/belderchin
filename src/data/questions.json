@@ -1,0 +1,16 @@
+{
+  "courses": [
+    {
+      "id": "episode-15",
+      "file": "episode-15.json"
+    },
+    {
+      "id": "episode-14", 
+      "file": "episode-14.json"
+    },
+    {
+      "id": "episode-13",
+      "file": "episode-13.json"
+    }
+  ]
+}
