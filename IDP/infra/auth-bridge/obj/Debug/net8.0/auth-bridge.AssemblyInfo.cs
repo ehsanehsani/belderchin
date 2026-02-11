@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("auth-bridge")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3f843b0115be6821a0a0d6e7ffe8207327e34be")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6398f7de7e79db2845d888a8c8cc87710ace405f")]
 [assembly: System.Reflection.AssemblyProductAttribute("auth-bridge")]
 [assembly: System.Reflection.AssemblyTitleAttribute("auth-bridge")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
