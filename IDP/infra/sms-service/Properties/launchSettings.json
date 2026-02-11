@@ -1,0 +1,35 @@
+{
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:8081",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KAVENEGAR_API_KEY": "your_kavenegar_api_key_here",
+        "KAVENEGAR_SENDER": "your_sender_number_here",
+        "ALLOWED_HOSTS": "*",
+        "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:8080,http://localhost:8081"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:8082;http://localhost:8081",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "KAVENEGAR_API_KEY": "your_kavenegar_api_key_here",
+        "KAVENEGAR_SENDER": "your_sender_number_here",
+        "ALLOWED_HOSTS": "*",
+        "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:8080,http://localhost:8081"
+      }
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "publishAllPorts": true,
+      "useSSL": false
+    }
+  }
+}

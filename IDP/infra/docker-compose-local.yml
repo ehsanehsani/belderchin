@@ -1,0 +1,125 @@
+services:
+  postgres:
+    build: 
+      context: ./postgres-init
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ory
+      POSTGRES_PASSWORD: ory
+      POSTGRES_DB: ory
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ory"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - belderchin-idp
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  kratos-migrate:
+    image: docker.arvancloud.ir/oryd/kratos:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DSN: postgres://ory:ory@postgres:5432/ory_kratos?sslmode=disable
+    command: ["migrate", "sql", "-e", "--read-from-env", "--yes"]
+    networks:
+      - belderchin-idp
+
+  kratos:
+    image: docker.arvancloud.ir/oryd/kratos:latest
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+    environment:
+      DSN: postgres://ory:ory@postgres:5432/ory_kratos?sslmode=disable
+    volumes:
+      - ./kratos:/etc/config/kratos
+    command: ["serve", "--config", "/etc/config/kratos/kratos.yml"]
+    ports:
+      - "4433:4433" # public
+      - "4434:4434" # admin
+    networks:
+      - belderchin-idp
+
+  hydra-migrate:
+    image: docker.arvancloud.ir/oryd/hydra:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DSN: postgres://ory:ory@postgres:5432/ory_hydra?sslmode=disable
+    command: ["migrate", "sql", "-e", "--read-from-env", "--yes"]
+    networks:
+      - belderchin-idp
+
+  hydra:
+    image: docker.arvancloud.ir/oryd/hydra:latest
+    depends_on:
+      hydra-migrate:
+        condition: service_completed_successfully
+    environment:
+      DSN: postgres://ory:ory@postgres:5432/ory_hydra?sslmode=disable
+    volumes:
+      - ./hydra:/etc/config/hydra
+    command: ["serve", "all", "--config", "/etc/config/hydra/hydra.yml", "--dev"]
+    ports:
+      - "4444:4444" # public
+      - "4445:4445" # admin
+    networks:
+      - belderchin-idp
+
+  # mailhog:
+  #   image: docker.tapsifood.cloud/library/mailhog/mailhog:latest
+  #   ports:
+  #     - "1025:1025" # SMTP
+  #     - "8025:8025" # Web UI
+  #   networks:
+  #     - belderchin-idp
+
+  # auth-bridge and sms-service commented out for local debugging
+  # auth-bridge:
+  #   build:
+  #     context: ./auth-bridge
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #   depends_on:
+  #     - kratos
+  #     - hydra
+  #   networks:
+  #     - belderchin-idp
+
+  # sms-service:
+  #   build:
+  #     context: ./sms-service
+  #   ports:
+  #     - "8081:8080"
+  #   environment:
+  #     ASPNETCORE_ENVIRONMENT: Development
+  #   networks:
+  #     - belderchin-idp
+
+  oathkeeper:
+    image: docker.arvancloud.ir/oryd/oathkeeper:latest
+    ports:
+      - "4455:4455" # public
+      - "4456:4456" # api
+    command: ["serve", "-c", "/etc/config/oathkeeper/oathkeeper.yml"]
+    volumes:
+      - ./oathkeeper:/etc/config/oathkeeper
+    depends_on:
+      - hydra
+    networks:
+      - belderchin-idp
+
+networks:
+  belderchin-idp:
+    driver: bridge
+
+volumes:
+  postgres_data:

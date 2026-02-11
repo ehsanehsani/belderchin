@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "m0MHxRnXWGc=",
+  "success": true,
+  "projectFilePath": "/Users/alireza/RiderProjects/Belderchin-IDP/infra/sms-service/sms-service.csproj",
+  "expectedPackageFiles": [
+    "/Users/alireza/.nuget/packages/kavenegar/1.2.4/kavenegar.1.2.4.nupkg.sha512",
+    "/Users/alireza/.nuget/packages/newtonsoft.json/12.0.3/newtonsoft.json.12.0.3.nupkg.sha512",
+    "/Users/alireza/.nuget/packages/microsoft.netcore.app.ref/8.0.23/microsoft.netcore.app.ref.8.0.23.nupkg.sha512",
+    "/Users/alireza/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.23/microsoft.aspnetcore.app.ref.8.0.23.nupkg.sha512",
+    "/Users/alireza/.nuget/packages/microsoft.netcore.app.host.osx-arm64/8.0.23/microsoft.netcore.app.host.osx-arm64.8.0.23.nupkg.sha512"
+  ],
+  "logs": []
+}

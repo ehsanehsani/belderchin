@@ -1,0 +1,729 @@
+{
+  "info": {
+    "_postman_id": "belderchin-idp-mobile-auth-collection",
+    "name": "🎯 Belderchin IDP - Mobile Auth Collection (WORKING)",
+    "description": "Complete mobile authentication workflow with code-based login for Belderchin Identity Provider - FULLY TESTED AND WORKING",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "📱 1. Mobile Registration",
+      "description": "Register new users with phone number and SMS verification",
+      "item": [
+        {
+          "name": "Get Registration Flow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('registrationFlowId', response.id);",
+                  "    // Extract CSRF token from the response",
+                  "    const csrfNode = response.ui.nodes.find(node => node.attributes.name === 'csrf_token');",
+                  "    if (csrfNode && csrfNode.attributes.value) {",
+                  "        pm.collectionVariables.set('csrfToken', csrfNode.attributes.value);",
+                  "        console.log('🔒 CSRF Token extracted:', csrfNode.attributes.value);",
+                  "    } else {",
+                  "        console.log('⚠️ No CSRF token found in response');",
+                  "    }",
+                  "    console.log('📋 Registration Flow ID:', response.id);",
+                  "    console.log('⏰ Flow expires at:', response.expires_at);",
+                  "} else {",
+                  "    console.log('❌ Failed to get registration flow');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/self-service/registration/api",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "registration", "api"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Registration - Request SMS Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.state === 'sent_email') {",
+                  "        console.log('📱 SMS code sent successfully!');",
+                  "        console.log('📱 Phone:', response.ui.nodes[1].attributes.value);",
+                  "        console.log('📝 Get code with: docker-compose logs kratos | grep registration_code');",
+                  "        console.log('⏰ Code expires in 10 minutes');",
+                  "    } else {",
+                  "        console.log('❌ Registration request failed');",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to submit registration');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"method\": \"code\",\n    \"traits\": {\n      \"phone\": \"{{phoneNumber}}\"\n    },\n    \"channel\": \"sms\",\n    \"csrf_token\": \"{{csrfToken}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/self-service/registration?flow={{registrationFlowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "registration"],
+              "query": [
+                {
+                  "key": "flow",
+                  "value": "{{registrationFlowId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Registration - Verify SMS Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.identity) {",
+                  "        pm.collectionVariables.set('newUserId', response.identity.id);",
+                  "        pm.collectionVariables.set('newUserPhone', response.identity.traits.phone);",
+                  "        console.log('✅ NEW USER CREATED!');",
+                  "        console.log('👤 User ID:', response.identity.id);",
+                  "        console.log('📱 Phone:', response.identity.traits.phone);",
+                  "        console.log('📊 State:', response.identity.state);",
+                  "        console.log('🎉 Registration complete!');",
+                  "    } else if (response.state === 'passed_challenge') {",
+                  "        console.log('✅ EXISTING USER VERIFIED!');",
+                  "        console.log('📱 Phone number verified and active');",
+                  "        console.log('🎉 User authenticated via code!');",
+                  "    } else {",
+                  "        console.log('❌ Verification failed');",
+                  "        console.log('🔍 Check:');",
+                  "        console.log('1. Is verification code correct?');",
+                  "        console.log('2. Did you get the latest code from logs?');",
+                  "        console.log('3. Command: docker-compose logs kratos | grep registration_code');",
+                  "        console.log('4. Code format: 6-digit number');",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to submit verification');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"method\": \"code\",\n    \"traits\": {\n      \"phone\": \"{{phoneNumber}}\"\n    },\n    \"code\": \"{{verificationCode}}\",\n    \"csrf_token\": \"{{csrfToken}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/self-service/registration?flow={{registrationFlowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "registration"],
+              "query": [
+                {
+                  "key": "flow",
+                  "value": "{{registrationFlowId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔐 2. Mobile Code Login",
+      "description": "Login existing users with phone number and SMS code (no password required)",
+      "item": [
+        {
+          "name": "Get Code Login Flow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('codeLoginFlowId', response.id);",
+                  "    // Extract CSRF token from the response",
+                  "    const csrfNode = response.ui.nodes.find(node => node.attributes.name === 'csrf_token');",
+                  "    if (csrfNode && csrfNode.attributes.value) {",
+                  "        pm.collectionVariables.set('csrfToken', csrfNode.attributes.value);",
+                  "        console.log('🔒 CSRF Token extracted:', csrfNode.attributes.value);",
+                  "    } else {",
+                  "        console.log('⚠️ No CSRF token found in response');",
+                  "    }",
+                  "    console.log('📋 Code Login Flow ID:', response.id);",
+                  "    console.log('⏰ Flow expires at:', response.expires_at);",
+                  "} else {",
+                  "    console.log('❌ Failed to get code login flow');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/self-service/registration/api",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "registration", "api"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request Login Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.state === 'sent_email') {",
+                  "        console.log('📱 Login code sent successfully!');",
+                  "        console.log('📱 Phone:', response.ui.nodes[1].attributes.value);",
+                  "        console.log('📝 Get code with: docker-compose logs kratos | grep registration_code');",
+                  "        console.log('⏰ Code expires in 10 minutes');",
+                  "        console.log('🔄 This uses registration flow for authentication');",
+                  "    } else {",
+                  "        console.log('❌ Login code request failed');",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to request login code');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"method\": \"code\",\n    \"traits\": {\n      \"phone\": \"{{phoneNumber}}\"\n    },\n    \"channel\": \"sms\",\n    \"csrf_token\": \"{{csrfToken}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/self-service/registration?flow={{codeLoginFlowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "registration"],
+              "query": [
+                {
+                  "key": "flow",
+                  "value": "{{codeLoginFlowId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Login Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.state === 'passed_challenge') {",
+                  "        console.log('🎉 CODE LOGIN SUCCESSFUL!');",
+                  "        console.log('✅ User authenticated via SMS code!');",
+                  "        console.log('📱 Mobile-only login working!');",
+                  "        console.log('🔓 No password required!');",
+                  "        console.log('🎯 Mission accomplished!');",
+                  "    } else if (response.identity) {",
+                  "        console.log('✅ New user created via login flow');",
+                  "        console.log('👤 User ID:', response.identity.id);",
+                  "        pm.collectionVariables.set('newUserId', response.identity.id);",
+                  "    } else {",
+                  "        console.log('❌ Code login failed');",
+                  "        console.log('🔍 Check:');",
+                  "        console.log('1. Is the 6-digit code correct?');",
+                  "        console.log('2. Did you get the latest code from logs?');",
+                  "        console.log('3. Command: docker-compose logs kratos | grep registration_code');",
+                  "        console.log('4. Is the user already registered?');",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to submit login code');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"method\": \"code\",\n    \"traits\": {\n      \"phone\": \"{{phoneNumber}}\"\n    },\n    \"code\": \"{{verificationCode}}\",\n    \"csrf_token\": \"{{csrfToken}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/self-service/registration?flow={{codeLoginFlowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "registration"],
+              "query": [
+                {
+                  "key": "flow",
+                  "value": "{{codeLoginFlowId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔑 3. Password Login (Optional)",
+      "description": "Traditional password-based login for users who prefer it",
+      "item": [
+        {
+          "name": "Get Password Login Flow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('passwordLoginFlowId', response.id);",
+                  "    // Extract CSRF token from the response",
+                  "    const csrfNode = response.ui.nodes.find(node => node.attributes.name === 'csrf_token');",
+                  "    if (csrfNode && csrfNode.attributes.value) {",
+                  "        pm.collectionVariables.set('csrfToken', csrfNode.attributes.value);",
+                  "        console.log('🔒 CSRF Token extracted:', csrfNode.attributes.value);",
+                  "    } else {",
+                  "        console.log('⚠️ No CSRF token found in response');",
+                  "    }",
+                  "    console.log('📋 Password Login Flow ID:', response.id);",
+                  "    console.log('⏰ Flow expires at:', response.expires_at);",
+                  "} else {",
+                  "    console.log('❌ Failed to get password login flow');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/self-service/login/api",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "login", "api"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Password Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.session && response.session.token) {",
+                  "        pm.collectionVariables.set('sessionToken', response.session.token);",
+                  "        pm.collectionVariables.set('sessionId', response.session.id);",
+                  "        console.log('✅ PASSWORD LOGIN SUCCESSFUL!');",
+                  "        console.log('🔑 Session created successfully');",
+                  "        console.log('🎫 Session Token:', response.session.token);",
+                  "        console.log('🆔 Session ID:', response.session.id);",
+                  "        console.log('👤 User ID:', response.session.identity.id);",
+                  "        console.log('📱 Phone:', response.session.identity.traits.phone);",
+                  "        console.log('⏰ Session expires:', response.session.expires_at);",
+                  "    } else {",
+                  "        console.log('❌ Password login failed');",
+                  "        console.log('🔍 Check:');",
+                  "        console.log('1. Is phone number correct?');",
+                  "        console.log('2. Is password correct?');",
+                  "        console.log('3. Does user have password credentials?');",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to submit password login');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"method\": \"password\",\n    \"identifier\": \"{{phoneNumber}}\",\n    \"password\": \"{{password}}\",\n    \"csrf_token\": \"{{csrfToken}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/self-service/login?flow={{passwordLoginFlowId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "login"],
+              "query": [
+                {
+                  "key": "flow",
+                  "value": "{{passwordLoginFlowId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎮 4. Session Management",
+      "description": "Check current session and logout functionality",
+      "item": [
+        {
+          "name": "Get Current Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.active) {",
+                  "        console.log('✅ SESSION ACTIVE');",
+                  "        console.log('👤 User ID:', response.identity.id);",
+                  "        console.log('📱 Phone:', response.identity.traits.phone);",
+                  "        console.log('📊 State:', response.identity.state);",
+                  "        console.log('🔐 AAL:', response.authenticator_assurance_level);",
+                  "        console.log('⏰ Expires:', response.expires_at);",
+                  "        console.log('📱 Auth Methods:', JSON.stringify(response.authentication_methods, null, 2));",
+                  "    } else {",
+                  "        console.log('❌ NO ACTIVE SESSION');",
+                  "        console.log('🔄 Please login first');",
+                  "    }",
+                  "} else if (pm.response.code === 401) {",
+                  "    console.log('❌ SESSION EXPIRED OR INVALID');",
+                  "    console.log('🔄 Please login again');",
+                  "} else {",
+                  "    console.log('❌ Failed to check session');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/whoami",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "whoami"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    console.log('✅ LOGOUT SUCCESSFUL');",
+                  "    console.log('🔄 Session cleared');",
+                  "    pm.collectionVariables.unset('sessionToken');",
+                  "    pm.collectionVariables.unset('sessionId');",
+                  "    console.log('🧹 Variables cleared');",
+                  "} else {",
+                  "    console.log('❌ Logout failed');",
+                  "    console.log('Response:', JSON.stringify(pm.response.json(), null, 2));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/self-service/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["self-service", "logout"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔧 5. Admin Tools",
+      "description": "Administrative tools for user management and debugging",
+      "item": [
+        {
+          "name": "Get User by Phone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.length > 0) {",
+                  "        console.log('✅ USER FOUND');",
+                  "        console.log('👤 User ID:', response[0].id);",
+                  "        console.log('📱 Phone:', response[0].traits.phone);",
+                  "        console.log('📊 State:', response[0].state);",
+                  "        console.log('📅 Created:', response[0].created_at);",
+                  "        console.log('🔄 Updated:', response[0].updated_at);",
+                  "        pm.collectionVariables.set('adminUserId', response[0].id);",
+                  "    } else {",
+                  "        console.log('❌ USER NOT FOUND');",
+                  "        console.log('📱 Phone:', pm.collectionVariables.get('phoneNumber'));",
+                  "        console.log('🔄 User may not be registered yet');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to search user');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlAdmin}}/identities?credentials_identifier={{phoneNumber}}",
+              "host": ["{{baseUrlAdmin}}"],
+              "path": ["identities"],
+              "query": [
+                {
+                  "key": "credentials_identifier",
+                  "value": "{{phoneNumber}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('🔐 USER CREDENTIALS:');",
+                  "    response.forEach(cred => {",
+                  "        console.log('🔑 Type:', cred.type);",
+                  "        console.log('📋 Config:', JSON.stringify(cred.config, null, 2));",
+                  "        console.log('---');",
+                  "    });",
+                  "} else {",
+                  "    console.log('❌ Failed to get user credentials');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrlAdmin}}/identities/{{adminUserId}}/credentials",
+              "host": ["{{baseUrlAdmin}}"],
+              "path": ["identities", "{{adminUserId}}", "credentials"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4433",
+      "type": "string",
+      "description": "🌐 Kratos Public API URL"
+    },
+    {
+      "key": "baseUrlAdmin",
+      "value": "http://localhost:4434",
+      "type": "string",
+      "description": "🔧 Kratos Admin API URL"
+    },
+    {
+      "key": "phoneNumber",
+      "value": "+989203020409",
+      "type": "string",
+      "description": "📱 Test phone number (has both password and code credentials)"
+    },
+    {
+      "key": "password",
+      "value": "SuperSecurePassword!2024#Random$%^&*",
+      "type": "string",
+      "description": "🔑 Test password for password-based authentication"
+    },
+    {
+      "key": "verificationCode",
+      "value": "123456",
+      "type": "string",
+      "description": "⚠️ IMPORTANT: Update this with actual 6-digit code from Kratos logs\n📝 Command: docker-compose logs kratos | grep registration_code"
+    },
+    {
+      "key": "csrfToken",
+      "value": "",
+      "type": "string",
+      "description": "🔒 Auto-set from flow responses (CSRF protection)"
+    },
+    {
+      "key": "registrationFlowId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during registration flow"
+    },
+    {
+      "key": "codeLoginFlowId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during code login flow"
+    },
+    {
+      "key": "passwordLoginFlowId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during password login flow"
+    },
+    {
+      "key": "newUserId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set when new user is created"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during successful login"
+    },
+    {
+      "key": "sessionToken",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during successful login"
+    },
+    {
+      "key": "adminUserId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set when user is found via admin API"
+    }
+  ]
+}

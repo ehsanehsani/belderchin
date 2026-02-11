@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE DATABASE ory_kratos;
+    CREATE DATABASE ory_hydra;
+    CREATE DATABASE sms_service;
+    GRANT ALL PRIVILEGES ON DATABASE ory_kratos TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE ory_hydra TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE sms_service TO $POSTGRES_USER;
+EOSQL
