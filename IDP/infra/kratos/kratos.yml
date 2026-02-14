@@ -59,8 +59,6 @@ selfservice:
     registration:
       enabled: true
       lifespan: 10m
-    login:
-      lifespan: 10m
     verification:
       enabled: true
       lifespan: 10m
@@ -70,7 +68,6 @@ selfservice:
     settings:
       lifespan: 10m
 
-# Basic courier configuration for testing
 courier:
   smtp:
     connection_uri: smtp://test:test@localhost:1025

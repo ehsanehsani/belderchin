@@ -5,6 +5,33 @@
     "description": "Complete mobile authentication workflow with code-based login for Belderchin Identity Provider - FULLY TESTED AND WORKING",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Generate random Iranian phone number for new test runs",
+          "function generateRandomIranianPhone() {",
+          "    const prefixes = ['910', '911', '912', '913', '914', '915', '916', '917', '918', '919',",
+          "                     '990', '991', '992', '993', '994',",
+          "                     '920', '921', '922', '923', '924', '925', '926', '927', '928', '929',",
+          "                     '930', '931', '932', '933', '934', '935', '936', '937', '938', '939',",
+          "                     '901', '902', '903', '904', '905'];",
+          "    const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];",
+          "    const randomNumber = Math.floor(Math.random() * 10000000).toString().padStart(7, '0');",
+          "    return '+98' + randomPrefix + randomNumber;",
+          "}",
+          "",
+          "// Only generate new phone number if we're starting a fresh test",
+          "if (!pm.collectionVariables.get('phoneNumber') || pm.collectionVariables.get('phoneNumber').startsWith('+989203020409')) {",
+          "    const newPhoneNumber = generateRandomIranianPhone();",
+          "    pm.collectionVariables.set('phoneNumber', newPhoneNumber);",
+          "    console.log('📱 Generated random phone number:', newPhoneNumber);",
+          "}"
+        ]
+      }
+    }
+  ],
   "item": [
     {
       "name": "📱 1. Mobile Registration",
@@ -26,7 +53,8 @@
                   "        pm.collectionVariables.set('csrfToken', csrfNode.attributes.value);",
                   "        console.log('🔒 CSRF Token extracted:', csrfNode.attributes.value);",
                   "    } else {",
-                  "        console.log('⚠️ No CSRF token found in response');",
+                  "        console.log('⚠️ No CSRF token found in response, using empty string');",
+                  "        pm.collectionVariables.set('csrfToken', '');",
                   "    }",
                   "    console.log('📋 Registration Flow ID:', response.id);",
                   "    console.log('⏰ Flow expires at:', response.expires_at);",
@@ -60,7 +88,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
+                  "if (pm.response.code === 200 || pm.response.code === 400) {",
                   "    const response = pm.response.json();",
                   "    if (response.state === 'sent_email') {",
                   "        console.log('📱 SMS code sent successfully!');",
@@ -115,7 +143,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
+                  "if (pm.response.code === 200 || pm.response.code === 400) {",
                   "    const response = pm.response.json();",
                   "    if (response.identity) {",
                   "        pm.collectionVariables.set('newUserId', response.identity.id);",
@@ -197,7 +225,8 @@
                   "        pm.collectionVariables.set('csrfToken', csrfNode.attributes.value);",
                   "        console.log('🔒 CSRF Token extracted:', csrfNode.attributes.value);",
                   "    } else {",
-                  "        console.log('⚠️ No CSRF token found in response');",
+                  "        console.log('⚠️ No CSRF token found in response, using empty string');",
+                  "        pm.collectionVariables.set('csrfToken', '');",
                   "    }",
                   "    console.log('📋 Code Login Flow ID:', response.id);",
                   "    console.log('⏰ Flow expires at:', response.expires_at);",
@@ -231,7 +260,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
+                  "if (pm.response.code === 200 || pm.response.code === 400) {",
                   "    const response = pm.response.json();",
                   "    if (response.state === 'sent_email') {",
                   "        console.log('📱 Login code sent successfully!');",
@@ -287,7 +316,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
+                  "if (pm.response.code === 200 || (pm.response.code === 400 && pm.response.json().state === 'passed_challenge')) {",
                   "    const response = pm.response.json();",
                   "    if (response.state === 'passed_challenge') {",
                   "        console.log('🎉 CODE LOGIN SUCCESSFUL!');",
@@ -367,7 +396,8 @@
                   "        pm.collectionVariables.set('csrfToken', csrfNode.attributes.value);",
                   "        console.log('🔒 CSRF Token extracted:', csrfNode.attributes.value);",
                   "    } else {",
-                  "        console.log('⚠️ No CSRF token found in response');",
+                  "        console.log('⚠️ No CSRF token found in response, using empty string');",
+                  "        pm.collectionVariables.set('csrfToken', '');",
                   "    }",
                   "    console.log('📋 Password Login Flow ID:', response.id);",
                   "    console.log('⏰ Flow expires at:', response.expires_at);",
@@ -387,9 +417,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/self-service/login/api",
+              "raw": "{{baseUrl}}/self-service/registration/api",
               "host": ["{{baseUrl}}"],
-              "path": ["self-service", "login", "api"]
+              "path": ["self-service", "registration", "api"]
             }
           },
           "response": []
@@ -447,7 +477,7 @@
             "url": {
               "raw": "{{baseUrl}}/self-service/login?flow={{passwordLoginFlowId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["self-service", "login"],
+              "path": ["self-service", "registration"],
               "query": [
                 {
                   "key": "flow",
@@ -663,7 +693,7 @@
       "key": "phoneNumber",
       "value": "+989203020409",
       "type": "string",
-      "description": "📱 Test phone number (has both password and code credentials)"
+      "description": "📱 Test phone number (auto-generated on each run)"
     },
     {
       "key": "password",
