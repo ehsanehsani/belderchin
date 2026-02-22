@@ -1,49 +1,33 @@
 using Kavenegar;
 using Kavenegar.Models;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-var app = builder.Build();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+// Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 
-app.MapPost("/sms/send", (SmsSendRequest req) =>
+// Configure Swagger
+builder.Services.AddSwaggerGen(c =>
 {
-    if (string.IsNullOrWhiteSpace(req.To))
-        return Results.BadRequest(new { error = "'to' is required" });
-
-    if (string.IsNullOrWhiteSpace(req.Message))
-        return Results.BadRequest(new { error = "'message' is required" });
-
-    var apiKey = Environment.GetEnvironmentVariable("KAVENEGAR_API_KEY");
-    var sender = Environment.GetEnvironmentVariable("KAVENEGAR_SENDER");
-
-    if (string.IsNullOrWhiteSpace(apiKey))
-        return Results.Problem("KAVENEGAR_API_KEY is not configured", statusCode: 500);
-
-    try
-    {
-        var client = new KavenegarApi(apiKey);
-
-        var result = client.Send(sender ?? string.Empty, req.To, req.Message);
-
-
-        return Results.Ok(new
-        {
-            ok = true,
-            messageId = result.Messageid,
-            status = result.Status
-        });
-    }
-    catch (Kavenegar.Exceptions.ApiException ex)
-    {
-        return Results.Problem($"Kavenegar API error: {ex.Message}", statusCode: 502);
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem(ex.Message, statusCode: 502);
-    }
+    c.SwaggerDoc("v1", new OpenApiInfo 
+    { 
+        Title = "SMS Service API", 
+        Version = "v1",
+        Description = "SMS Service for Belderchin IDP using Kavenegar"
+    });
 });
 
-app.Run();
+var app = builder.Build();
 
-public record SmsSendRequest(string To, string Message);
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapControllers();
+
+app.Run();

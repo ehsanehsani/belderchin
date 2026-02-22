@@ -4,8 +4,24 @@ using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text.Json;
 using StackExchange.Redis;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+
+// Configure Swagger
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo 
+    { 
+        Title = "Auth Bridge API", 
+        Version = "v1",
+        Description = "Authentication Bridge Service for Belderchin IDP"
+    });
+});
 
 // Add SMTP configuration
 var smtpConfig = builder.Configuration.GetSection("Smtp");
@@ -26,6 +42,13 @@ var redisConfig = builder.Configuration.GetSection("Redis");
 var redisConnectionString = redisConfig["ConnectionString"] ?? "localhost:6379";
 
 var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 // Redis session storage
 IConnectionMultiplexer redis = ConnectionMultiplexer.Connect(redisConnectionString);
@@ -62,11 +85,9 @@ async Task<JsonElement?> GetSessionAsync(string sessionId)
     }
 }
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapControllers();
 
-// App-driven verification + 2FA code issuing.
-// This is a minimal implementation using in-memory storage.
-// For production: replace with persistent store (Postgres/Redis), rate limits, audit logs.
+app.Run();
 
 var store = new ConcurrentDictionary<string, CodeRecord>();
 

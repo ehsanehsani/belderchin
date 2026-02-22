@@ -9,6 +9,7 @@ Welcome to the Belderchin IDP documentation folder. This contains all project do
 
 ### 🔧 Technical Documentation
 - **[IMPLEMENTATION-SUMMARY.md](./IMPLEMENTATION-SUMMARY.md)** - Complete implementation overview
+- **[ARCHITECTURE-MIGRATION.md](./ARCHITECTURE-MIGRATION.md)** - Controller architecture migration details
 - **[CODE-GENERATION-LOCATIONS.md](./CODE-GENERATION-LOCATIONS.md)** - Code generation and file locations
 - **[CODE-STORAGE-EXPLANATION.md](./CODE-STORAGE-EXPLANATION.md)** - Code storage and architecture explanation
 
@@ -42,12 +43,30 @@ Belderchin-IDP/
 ├── postman/                 # 📮 Postman collections
 ├── infra/                   # 🏗️ Infrastructure and services
 │   ├── auth-bridge/        # 🔐 Custom authentication bridge
+│   │   ├── Controllers/     # 🎯 API controllers
+│   │   │   ├── HealthController.cs
+│   │   │   ├── VerificationController.cs
+│   │   │   └── SessionsController.cs
+│   │   └── Program.cs       # ⚙️ Service configuration
 │   ├── sms-service/        # 📱 SMS delivery service
+│   │   ├── Controllers/     # 🎯 API controllers
+│   │   │   ├── HealthController.cs
+│   │   │   └── SMSController.cs
+│   │   └── Program.cs       # ⚙️ Service configuration
+│   ├── backend/             # 🎓 Learning platform backend
+│   │   ├── Controllers/     # 🎯 API controllers
+│   │   │   ├── AuthController.cs
+│   │   │   ├── CoursesController.cs
+│   │   │   ├── UsersController.cs
+│   │   │   ├── AdminController.cs
+│   │   │   └── HealthController.cs
+│   │   ├── Services/        # 🔧 Business logic
+│   │   ├── Models/          # 📋 Data models
+│   │   └── Program.cs       # ⚙️ Service configuration
 │   ├── kratos/             # 🆔 Identity management
 │   ├── hydra/              # 🔑 OAuth2/OIDC provider
 │   ├── oathkeeper/         # 🛡️ API gateway
 │   └── postgres-init/      # 🗄️ Database initialization
-├── sample-api/             # 🎯 Example protected API
 └── Belderchin-IDP.sln      # 📦 Solution file
 ```
 

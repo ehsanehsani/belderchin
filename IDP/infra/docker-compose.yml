@@ -32,6 +32,35 @@ services:
     volumes:
       - redis_data:/data
 
+  couchbase:
+    image: docker.arvancloud.ir/couchbase:7.2.0
+    ports:
+      - "8091-8094:8091-8094"
+      - "11210:11210"
+    environment:
+      - COUCHBASE_ADMINISTRATOR_USERNAME=admin
+      - COUCHBASE_ADMINISTRATOR_PASSWORD=password
+      - COUCHBASE_BUCKET=belderchin
+      - COUCHBASE_RBAC_USERNAME=admin
+      - COUCHBASE_RBAC_PASSWORD=password
+      - COUCHBASE_RBAC_NAME=admin
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/pools/default"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - belderchin-idp
+    volumes:
+      - couchbase_data:/opt/couchbase/var
+    depends_on:
+      - postgres
+
   kratos-migrate:
     image: docker.arvancloud.ir/oryd/kratos:latest
     depends_on:
@@ -114,6 +143,24 @@ services:
     networks:
       - belderchin-idp
 
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8082:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      COUCHBASE_CONNECTIONSTRING: couchbase://couchbase
+      COUCHBASE_USERNAME: admin
+      COUCHBASE_PASSWORD: password
+      COUCHBASE_BUCKETNAME: belderchin
+    depends_on:
+      - couchbase
+      - redis
+      - auth-bridge
+    networks:
+      - belderchin-idp
+
   sms-service:
     build:
       context: ./sms-service
@@ -144,3 +191,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  couchbase_data:

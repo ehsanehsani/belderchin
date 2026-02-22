@@ -7,5 +7,6 @@
 
   <ItemGroup>
     <PackageReference Include="Kavenegar" Version="1.2.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 </Project>
