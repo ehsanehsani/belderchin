@@ -2,6 +2,7 @@
   "id": "episode-15",
   "title": "Episode 15: Used To",
   "description": "Learn about 'used to' vs 'be used to' - expressing past habits and present adaptation",
+  "summaryFA": "ای ساختار برای مواقعی هست که میخواهیم یک کاری را که قبلا انجام میشده اما الان دیگه انجام نمیشه رو بگیم و یا چیزی که قبلا وجود داشته و الان دیگه وجود نداره.\nمثلا\nHe used to play footbal\nThere used to be a big tree.",
   "isActive": true,
   "metadata": {
     "episodeNumber": 15,
@@ -77,5 +78,17 @@
       "tags": ["used to", "word order", "questions", "past habits"],
       "explanation": "In questions with 'used to', use 'Did + subject + used to + verb'"
     }
+  ],
+  "audioExercises": [
+    { "id": "e15-ae1", "farsi": "۱- من قبلاً در تهران زندگی می‌کردم.", "english": "1- I used to live in Tehran." },
+    { "id": "e15-ae2", "farsi": "۲- این اتاق قبلاً فرش داشت.", "english": "2- This room used to have a carpet." },
+    { "id": "e15-ae3", "farsi": "۳- تو قبلاً پرستار من بودی.", "english": "3- You used to be my babysit." },
+    { "id": "e15-ae4", "farsi": "۴- برادرم قبلاً گیتار می‌زد.", "english": "4- My brother used to play the Gitar." },
+    { "id": "e15-ae5", "farsi": "۵- او هر آخر هفته به من زنگ می‌زد.", "english": "5- She used to call me every weekend." },
+    { "id": "e15-ae6", "farsi": "۶- ما هر تابستان به دیدن پدربزرگ و مادربزرگمان می‌رفتیم.", "english": "6- We used to visit our grandparents every summer." },
+    { "id": "e15-ae7", "farsi": "۷- این ساختمان قبلاً کتابخانه بود.", "english": "7- This building used to be a library." },
+    { "id": "e15-ae8", "farsi": "۸- من قبلاً به موسیقی راک گوش می‌دادم.", "english": "8- I used to listen to rock music." },
+    { "id": "e15-ae9", "farsi": "۹- ما بعد از مدرسه ویدیوگیم بازی می‌کردیم.", "english": "9- We used to play video games after school." },
+    { "id": "e15-ae10", "farsi": "۱۰- من قبلاً زیاد نوشابه می‌خوردم.", "english": "10- I used to drink a lot of soda." }
   ]
 }
