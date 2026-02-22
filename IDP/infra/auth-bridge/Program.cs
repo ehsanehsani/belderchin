@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text.Json;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +21,46 @@ var kratosAdminUrl = kratosConfig["AdminUrl"] ?? "http://kratos:4434";
 var kratosPublicUrl = kratosConfig["PublicUrl"] ?? "http://kratos:4433";
 var kratosSchemaId = kratosConfig["IdentitySchemaId"] ?? "phone_v1";
 
+// Add Redis configuration
+var redisConfig = builder.Configuration.GetSection("Redis");
+var redisConnectionString = redisConfig["ConnectionString"] ?? "localhost:6379";
+
 var app = builder.Build();
+
+// Redis session storage
+IConnectionMultiplexer redis = ConnectionMultiplexer.Connect(redisConnectionString);
+IDatabase redisDb = redis.GetDatabase();
+
+// Session storage using Redis (production-ready)
+async Task<bool> StoreSessionAsync(string sessionId, object sessionData)
+{
+    try
+    {
+        var json = JsonSerializer.Serialize(sessionData);
+        var expiry = TimeSpan.FromHours(24); // 24 hour session expiry
+        await redisDb.StringSetAsync($"session:{sessionId}", json, expiry);
+        return true;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Failed to store session in Redis: {ex.Message}");
+        return false;
+    }
+}
+
+async Task<JsonElement?> GetSessionAsync(string sessionId)
+{
+    try
+    {
+        var json = await redisDb.StringGetAsync($"session:{sessionId}");
+        return json.HasValue ? JsonSerializer.Deserialize<JsonElement>(json) : null;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Failed to get session from Redis: {ex.Message}");
+        return null;
+    }
+}
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
@@ -359,7 +399,7 @@ app.MapGet("/sessions/validate", (HttpContext context) =>
 });
 
 // Session whoami endpoint
-app.MapGet("/sessions/whoami", (HttpContext context) =>
+app.MapGet("/sessions/whoami", async (HttpContext context) =>
 {
     var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
     if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
@@ -369,36 +409,46 @@ app.MapGet("/sessions/whoami", (HttpContext context) =>
     
     var token = authHeader.Substring("Bearer ".Length);
     
-    // Simple validation (In production, retrieve session data)
+    // Extract session ID from token
     if (token.StartsWith("auth_bridge_session_") && token.Length > 20)
     {
-        // Mock session data (In production, retrieve from storage)
-        var sessionData = new
-        {
-            active = true,
-            identity = new
-            {
-                id = "mock_identity_id",
-                traits = new
-                {
-                    phone = "+989934395113",
-                    email = "user@example.com"
-                }
-            },
-            authenticator_assurance_level = "aal1",
-            expires_at = DateTimeOffset.UtcNow.AddHours(24).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-            issued_at = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-            authentication_methods = new[]
-            {
-                new
-                {
-                    method = "code",
-                    completed_at = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                }
-            }
-        };
+        var sessionId = token.Substring("auth_bridge_session_".Length);
         
-        return Results.Ok(sessionData);
+        // Retrieve session data from Redis
+        var sessionDataElement = await GetSessionAsync(sessionId);
+        if (sessionDataElement.HasValue)
+        {
+            var sessionData = sessionDataElement.Value;
+            if (sessionData.ValueKind == JsonValueKind.Object)
+            {
+                var response = new
+                {
+                    active = sessionData.GetProperty("active").GetBoolean(),
+                    identity = new
+                    {
+                        id = sessionData.GetProperty("identity_id").GetString(),
+                        traits = new
+                        {
+                            phone = sessionData.GetProperty("phone").GetString(),
+                            email = sessionData.GetProperty("email").GetString()
+                        }
+                    },
+                    authenticator_assurance_level = sessionData.GetProperty("aal").GetString(),
+                    expires_at = sessionData.GetProperty("expires_at").GetString(),
+                    issued_at = sessionData.GetProperty("created_at").GetString(),
+                    authentication_methods = new[]
+                    {
+                        new
+                        {
+                            method = sessionData.GetProperty("authentication_method").GetString(),
+                            completed_at = sessionData.GetProperty("authenticated_at").GetString()
+                        }
+                    }
+                };
+                
+                return Results.Ok(response);
+            }
+        }
     }
     
     return Results.Unauthorized();
@@ -482,23 +532,31 @@ async Task<(bool Success, string? SessionToken, string? Error)> CreateAuthBridge
     try
     {
         // First, ensure identity exists
-        var (identityCreated, _, identityError) = await CreateKratosIdentity(phone, email);
+        var (identityCreated, identityId, identityError) = await CreateKratosIdentity(phone, email);
         if (!identityCreated && identityError != null && !identityError.Contains("already exists") && !identityError.Contains("Conflict"))
         {
             return (false, null, identityError);
         }
         
         // Get existing identity by phone/email
-        var identityId = await GetIdentityId(phone, email);
+        if (string.IsNullOrEmpty(identityId))
+        {
+            identityId = await GetIdentityId(phone, email);
+        }
+        
         if (string.IsNullOrEmpty(identityId))
         {
             return (false, null, "Could not find or create identity");
         }
         
         // Create Auth-Bridge session token (self-contained)
+        var sessionId = Guid.NewGuid().ToString("N");
+        var sessionToken = $"auth_bridge_session_{sessionId}";
+        
+        // Create session data object
         var sessionData = new
         {
-            session_id = Guid.NewGuid().ToString("N"),
+            session_id = sessionId,
             identity_id = identityId,
             phone = phone,
             email = email,
@@ -509,9 +567,14 @@ async Task<(bool Success, string? SessionToken, string? Error)> CreateAuthBridge
             aal = "aal1",
             active = true
         };
-
-        // Store session in memory (for production, use Redis/Database)
-        var sessionToken = $"auth_bridge_session_{sessionData.session_id}";
+        
+        // Store session data in Redis
+        var stored = await StoreSessionAsync(sessionId, sessionData);
+        if (!stored)
+        {
+            Console.WriteLine($"❌ Failed to store session in Redis");
+            return (false, null, "Failed to store session");
+        }
         
         Console.WriteLine($"✅ Created Auth-Bridge session for identity: {identityId}");
         Console.WriteLine($"🔐 Session Token: {sessionToken}");

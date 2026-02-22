@@ -18,6 +18,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
 
+  redis:
+    image: docker.tapsifood.cloud/library/redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - belderchin-idp
+    volumes:
+      - redis_data:/data
+
   kratos-migrate:
     image: docker.arvancloud.ir/oryd/kratos:latest
     depends_on:
@@ -96,6 +110,7 @@ services:
       - kratos
       - hydra
       - mailhog
+      - redis
     networks:
       - belderchin-idp
 
@@ -128,3 +143,4 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:
