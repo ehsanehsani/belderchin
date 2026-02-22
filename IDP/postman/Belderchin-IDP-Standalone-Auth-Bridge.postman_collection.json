@@ -1,0 +1,791 @@
+{
+  "info": {
+    "_postman_id": "belderchin-idp-standalone-auth-bridge",
+    "name": "🎯 Belderchin IDP - STANDALONE AUTH-BRIDGE",
+    "description": "COMPLETE STANDALONE SOLUTION: Auth-Bridge handles verification AND sessions - NO KRATOS DEPENDENCY",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Generate random Iranian phone number for new test runs",
+          "function generateRandomIranianPhone() {",
+          "    const prefixes = ['910', '911', '912', '913', '914', '915', '916', '917', '918', '919',",
+          "                     '990', '991', '992', '993', '994',",
+          "                     '920', '921', '922', '923', '924', '925', '926', '927', '928', '929',",
+          "                     '930', '931', '932', '933', '934', '935', '936', '937', '938', '939',",
+          "                     '901', '902', '903', '904', '905'];",
+          "    const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];",
+          "    const randomNumber = Math.floor(Math.random() * 10000000).toString().padStart(7, '0');",
+          "    return '+98' + randomPrefix + randomNumber;",
+          "}",
+          "",
+          "// Generate random test email",
+          "function generateTestEmail() {",
+          "    const timestamp = Date.now();",
+          "    return `test${timestamp}@example.com`;",
+          "}",
+          "",
+          "// Only generate new phone/email if we're starting a fresh test",
+          "if (!pm.collectionVariables.get('phoneNumber') || pm.collectionVariables.get('phoneNumber').startsWith('+989203020409')) {",
+          "    const newPhoneNumber = generateRandomIranianPhone();",
+          "    const newEmail = generateTestEmail();",
+          "    pm.collectionVariables.set('phoneNumber', newPhoneNumber);",
+          "    pm.collectionVariables.set('email', newEmail);",
+          "    console.log('📱 Generated random phone number:', newPhoneNumber);",
+          "    console.log('📧 Generated random email:', newEmail);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "📱 1. Registration (Auth-Bridge Standalone)",
+      "description": "Register users with Auth-Bridge verification and session management",
+      "item": [
+        {
+          "name": "Start Registration - Auth-Bridge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('registrationId', response.id);",
+                  "    console.log('✅ Registration started!');",
+                  "    console.log('🆔 Registration ID:', response.id);",
+                  "    console.log('📡 Delivery method:', response.delivery);",
+                  "    console.log('📝 Message:', response.message);",
+                  "    if (response.delivery === 'email') {",
+                  "        console.log('📧 Check MailHog at: http://localhost:8025');",
+                  "        console.log('📧 Email sent to:', response.email);",
+                  "        // Auto-extract code from MailHog after 2 seconds delay",
+                  "        setTimeout(() => {",
+                  "            pm.sendRequest({",
+                  "                url: '{{mailHogUrl}}/api/v2/messages',",
+                  "                method: 'GET',",
+                  "                header: ['Accept: application/json'],",
+                  "                body: null",
+                  "            }, (err, res) => {",
+                  "                if (!err && res.code === 200) {",
+                  "                    const mailResponse = res.json();",
+                  "                    if (mailResponse.total > 0 && mailResponse.items[0]) {",
+                  "                        const body = mailResponse.items[0].Content.Body;",
+                  "                        const codeMatch = body.match(/\\b(\\d{6})\\b/);",
+                  "                        if (codeMatch) {",
+                  "                            const extractedCode = codeMatch[1];",
+                  "                            pm.collectionVariables.set('registrationCode', extractedCode);",
+                  "                            console.log('🔢 AUTO-EXTRACTED REGISTRATION CODE:', extractedCode);",
+                  "                            console.log('🎯 Ready for registration verification!');",
+                  "                        } else {",
+                  "                            console.log('⚠️ No code found in email body');",
+                  "                            console.log('📧 Email body:', body);",
+                  "                        }",
+                  "                    } else {",
+                  "                        console.log('❌ No emails found in MailHog');",
+                  "                    }",
+                  "                }",
+                  "            });",
+                  "        }, 2000);",
+                  "    } else {",
+                  "        console.log('📱 SMS sent to:', pm.collectionVariables.get('phoneNumber'));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to start registration');",
+                  "    console.log('Response:', JSON.stringify(pm.response.json(), null, 2));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"{{phoneNumber}}\",\n    \"email\": \"{{email}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{authBridgeUrl}}/verification/start",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["verification", "start"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Registration + Create Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.ok === true) {",
+                  "        console.log('🎉 REGISTRATION SUCCESSFUL!');",
+                  "        console.log('✅ New user created and verified!');",
+                  "        console.log('📱 Phone:', response.phone);",
+                  "        console.log('📧 Email:', response.email);",
+                  "        if (response.session_token) {",
+                  "            console.log('🔐 Auth-Bridge Session Token:', response.session_token);",
+                  "            pm.collectionVariables.set('authBridgeSessionToken', response.session_token);",
+                  "            console.log('🎯 STANDALONE AUTH-BRIDGE COMPLETE!');",
+                  "            console.log('🚀 Registration + Session created!');",
+                  "        } else {",
+                  "            console.log('⚠️ Session token not found in response');",
+                  "        }",
+                  "        pm.collectionVariables.set('userRegistered', 'true');",
+                  "    } else {",
+                  "        console.log('❌ Registration verification failed');",
+                  "        console.log('🔍 Check:');",
+                  "        console.log('1. Is 6-digit code correct?');",
+                  "        console.log('2. Did you get code from MailHog?');",
+                  "        console.log('3. MailHog URL: http://localhost:8025');",
+                  "        console.log('4. Registration ID:', pm.collectionVariables.get('registrationId'));",
+                  "        console.log('5. Code format: 6-digit number');",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to submit registration verification');",
+                  "}",
+                  "// Wait before proceeding to next flow",
+                  "setTimeout(() => {",
+                  "    console.log('🚀 Ready for login flows!');",
+                  "}, 1000);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"{{registrationId}}\",\n    \"code\": \"{{registrationCode}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{authBridgeUrl}}/verification/confirm",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["verification", "confirm"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔐 2. Login (Auth-Bridge Standalone)",
+      "description": "Login users with Auth-Bridge verification and session management",
+      "item": [
+        {
+          "name": "Start Login Verification - Auth-Bridge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('loginId', response.id);",
+                  "    console.log('✅ Login verification started!');",
+                  "    console.log('🆔 Login ID:', response.id);",
+                  "    console.log('📡 Delivery method:', response.delivery);",
+                  "    console.log('📝 Message:', response.message);",
+                  "    if (response.delivery === 'email') {",
+                  "        console.log('📧 Check MailHog at: http://localhost:8025');",
+                  "        console.log('📧 Email sent to:', response.email);",
+                  "        // Auto-extract code from MailHog after 2 seconds delay",
+                  "        setTimeout(() => {",
+                  "            pm.sendRequest({",
+                  "                url: '{{mailHogUrl}}/api/v2/messages',",
+                  "                method: 'GET',",
+                  "                header: ['Accept: application/json'],",
+                  "                body: null",
+                  "            }, (err, res) => {",
+                  "                if (!err && res.code === 200) {",
+                  "                    const mailResponse = res.json();",
+                  "                    if (mailResponse.total > 0 && mailResponse.items[0]) {",
+                  "                        const body = mailResponse.items[0].Content.Body;",
+                  "                        const codeMatch = body.match(/\\b(\\d{6})\\b/);",
+                  "                        if (codeMatch) {",
+                  "                            const extractedCode = codeMatch[1];",
+                  "                            pm.collectionVariables.set('loginCode', extractedCode);",
+                  "                            console.log('🔢 AUTO-EXTRACTED LOGIN CODE:', extractedCode);",
+                  "                            console.log('🎯 Ready for login verification!');",
+                  "                        } else {",
+                  "                            console.log('⚠️ No code found in email body');",
+                  "                            console.log('📧 Email body:', body);",
+                  "                        }",
+                  "                    } else {",
+                  "                        console.log('❌ No emails found in MailHog');",
+                  "                    }",
+                  "                }",
+                  "            });",
+                  "        }, 2000);",
+                  "    } else {",
+                  "        console.log('📱 SMS sent to:', pm.collectionVariables.get('phoneNumber'));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to start login verification');",
+                  "    console.log('Response:', JSON.stringify(pm.response.json(), null, 2));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"{{phoneNumber}}\",\n    \"email\": \"{{email}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{authBridgeUrl}}/verification/start",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["verification", "start"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Login + Create Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.ok === true) {",
+                  "        console.log('🎉 LOGIN SUCCESSFUL!');",
+                  "        console.log('✅ User authenticated via code!');",
+                  "        console.log('📱 Mobile-only login working!');",
+                  "        console.log('🔓 No password required!');",
+                  "        if (response.session_token) {",
+                  "            console.log('🔐 Auth-Bridge Session Token:', response.session_token);",
+                  "            pm.collectionVariables.set('authBridgeSessionToken', response.session_token);",
+                  "            console.log('🎯 STANDALONE LOGIN COMPLETE!');",
+                  "            console.log('🚀 Login + Session created!');",
+                  "        } else {",
+                  "            console.log('⚠️ Session token not found in response');",
+                  "        }",
+                  "        pm.collectionVariables.set('userLoggedIn', 'true');",
+                  "    } else {",
+                  "        console.log('❌ Login verification failed');",
+                  "        console.log('🔍 Check:');",
+                  "        console.log('1. Is 6-digit code correct?');",
+                  "        console.log('2. Did you get code from MailHog?');",
+                  "        console.log('3. MailHog URL: http://localhost:8025');",
+                  "        console.log('4. Login ID:', pm.collectionVariables.get('loginId'));",
+                  "        console.log('5. Code format: 6-digit number');",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to submit login verification');",
+                  "}",
+                  "// Wait before proceeding to next flow",
+                  "setTimeout(() => {",
+                  "    console.log('🚀 Ready for 2FA flows!');",
+                  "}, 1000);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"{{loginId}}\",\n    \"code\": \"{{loginCode}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{authBridgeUrl}}/verification/confirm",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["verification", "confirm"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🛡️ 3. 2FA (Auth-Bridge Standalone)",
+      "description": "2FA verification using Auth-Bridge with session management",
+      "item": [
+        {
+          "name": "Start 2FA - Auth-Bridge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('2faId', response.id);",
+                  "    console.log('✅ 2FA started!');",
+                  "    console.log('🆔 2FA ID:', response.id);",
+                  "    console.log('📡 Delivery method:', response.delivery);",
+                  "    console.log('📝 Message:', response.message);",
+                  "    if (response.delivery === 'email') {",
+                  "        console.log('📧 Check MailHog at: http://localhost:8025');",
+                  "        console.log('📧 2FA Email sent to:', response.email);",
+                  "        // Auto-extract code from MailHog after 2 seconds delay",
+                  "        setTimeout(() => {",
+                  "            pm.sendRequest({",
+                  "                url: '{{mailHogUrl}}/api/v2/messages',",
+                  "                method: 'GET',",
+                  "                header: ['Accept: application/json'],",
+                  "                body: null",
+                  "            }, (err, res) => {",
+                  "                if (!err && res.code === 200) {",
+                  "                    const mailResponse = res.json();",
+                  "                    if (mailResponse.total > 0 && mailResponse.items[0]) {",
+                  "                        const body = mailResponse.items[0].Content.Body;",
+                  "                        const codeMatch = body.match(/\\b(\\d{6})\\b/);",
+                  "                        if (codeMatch) {",
+                  "                            const extractedCode = codeMatch[1];",
+                  "                            pm.collectionVariables.set('2faCode', extractedCode);",
+                  "                            console.log('🔢 AUTO-EXTRACTED 2FA CODE:', extractedCode);",
+                  "                            console.log('🎯 Ready for 2FA verification!');",
+                  "                        } else {",
+                  "                            console.log('⚠️ No code found in email body');",
+                  "                            console.log('📧 Email body:', body);",
+                  "                        }",
+                  "                    } else {",
+                  "                        console.log('❌ No emails found in MailHog');",
+                  "                    }",
+                  "                }",
+                  "            });",
+                  "        }, 2000);",
+                  "    } else {",
+                  "        console.log('📱 2FA SMS sent to:', pm.collectionVariables.get('phoneNumber'));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to start 2FA');",
+                  "    console.log('Response:', JSON.stringify(pm.response.json(), null, 2));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"{{phoneNumber}}\",\n    \"email\": \"{{email}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{authBridgeUrl}}/2fa/start",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["2fa", "start"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm 2FA + Create Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.ok === true) {",
+                  "        console.log('✅ 2FA VERIFICATION SUCCESSFUL!');",
+                  "        console.log('🎯 2FA code verified successfully');",
+                  "        console.log('🆔 2FA ID:', pm.collectionVariables.get('2faId'));",
+                  "        if (response.session_token) {",
+                  "            console.log('🔐 Auth-Bridge Session Token:', response.session_token);",
+                  "            pm.collectionVariables.set('authBridgeSessionToken', response.session_token);",
+                  "            console.log('🎯 STANDALONE 2FA COMPLETE!');",
+                  "            console.log('🚀 2FA + Session created!');",
+                  "        } else {",
+                  "            console.log('⚠️ Session token not found in response');",
+                  "        }",
+                  "        console.log('🎉 Two-factor authentication complete!');",
+                  "        pm.collectionVariables.set('user2faVerified', 'true');",
+                  "    } else {",
+                  "        console.log('❌ 2FA verification failed');",
+                  "        console.log('🔍 Check:');",
+                  "        console.log('1. Is 6-digit 2FA code correct?');",
+                  "        console.log('2. Did you get code from MailHog?');",
+                  "        console.log('3. MailHog URL: http://localhost:8025');",
+                  "        console.log('4. 2FA ID:', pm.collectionVariables.get('2faId'));",
+                  "        console.log('Response:', JSON.stringify(response, null, 2));",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to submit 2FA verification');",
+                  "}",
+                  "// Wait before proceeding to next flow",
+                  "setTimeout(() => {",
+                  "    console.log('🚀 All authentication flows ready!');",
+                  "}, 1000);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"{{2faId}}\",\n    \"code\": \"{{2faCode}}\"\n  }"
+            },
+            "url": {
+              "raw": "{{authBridgeUrl}}/2fa/confirm",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["2fa", "confirm"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔐 4. Auth-Bridge Session Management",
+      "description": "Check and manage Auth-Bridge sessions",
+      "item": [
+        {
+          "name": "Check Current Auth-Bridge Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.active) {",
+                  "        console.log('✅ AUTH-BRIDGE SESSION ACTIVE');",
+                  "        console.log('👤 User ID:', response.identity.id);",
+                  "        console.log('📱 Phone:', response.identity.traits.phone);",
+                  "        if (response.identity.traits.email) {",
+                  "            console.log('📧 Email:', response.identity.traits.email);",
+                  "        }",
+                  "        console.log('📊 State:', response.identity.state);",
+                  "        console.log('🔐 AAL:', response.authenticator_assurance_level);",
+                  "        console.log('⏰ Expires:', response.expires_at);",
+                  "        console.log('📱 Auth Methods:', JSON.stringify(response.authentication_methods, null, 2));",
+                  "        console.log('🎯 STANDALONE AUTH-BRIDGE WORKING!');",
+                  "    } else {",
+                  "        console.log('❌ NO ACTIVE AUTH-BRIDGE SESSION');",
+                  "        console.log('🔄 Please complete Auth-Bridge verification first');",
+                  "    }",
+                  "} else if (pm.response.code === 401) {",
+                  "    console.log('❌ AUTH-BRIDGE SESSION EXPIRED OR INVALID');",
+                  "    console.log('🔄 Please complete Auth-Bridge verification again');",
+                  "} else {",
+                  "    console.log('❌ Failed to check Auth-Bridge session');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authBridgeSessionToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{authBridgeUrl}}/sessions/whoami",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["sessions", "whoami"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Auth-Bridge Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.valid) {",
+                  "        console.log('✅ AUTH-BRIDGE SESSION VALID');",
+                  "        console.log('📝 Message:', response.message);",
+                  "        console.log('🔐 Token Type:', response.token_type);",
+                  "    } else {",
+                  "        console.log('❌ AUTH-BRIDGE SESSION INVALID');",
+                  "        console.log('🔍 Check token format and expiration');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to validate Auth-Bridge session');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authBridgeSessionToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{authBridgeUrl}}/sessions/validate",
+              "host": ["{{authBridgeUrl}}"],
+              "path": ["sessions", "validate"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📧 5. MailHog Tools",
+      "description": "Tools for checking MailHog and retrieving verification codes",
+      "item": [
+        {
+          "name": "Check MailHog Messages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('📧 MailHog Status:');",
+                  "    console.log('📊 Total messages:', response.total);",
+                  "    console.log('📬 Messages count:', response.count);",
+                  "    if (response.total > 0) {",
+                  "        console.log('📋 Latest messages:');",
+                  "        response.items.slice(0, 3).forEach((msg, index) => {",
+                  "            console.log(`${index + 1}. From: ${msg.From.Mailbox}@${msg.From.Domain}`);",
+                  "            console.log(`   To: ${msg.To[0].Mailbox}@${msg.To[0].Domain}`);",
+                  "            console.log(`   Subject: ${msg.Content.Headers.Subject ? msg.Content.Headers.Subject[0] : 'No Subject'}`);",
+                  "            console.log(`   Date: ${msg.Content.Headers.Date ? msg.Content.Headers.Date[0] : 'No Date'}`);",
+                  "            console.log(`   Body: ${msg.Content.Body}`);",
+                  "            console.log('---');",
+                  "        });",
+                  "        // Extract verification codes from email bodies",
+                  "        const codes = [];",
+                  "        response.items.forEach(msg => {",
+                  "            const codeMatch = msg.Content.Body.match(/\\b(\\d{6})\\b/);",
+                  "            if (codeMatch) {",
+                  "                codes.push(codeMatch[0]);",
+                  "            }",
+                  "        });",
+                  "        if (codes.length > 0) {",
+                  "            console.log('🔢 Found verification codes:', codes.join(', '));",
+                  "            console.log('💡 Use latest code in verification requests');",
+                  "        }",
+                  "    } else {",
+                  "        console.log('📭 No messages found');",
+                  "        console.log('💡 Send a verification request first');",
+                  "    }",
+                  "} else {",
+                  "    console.log('❌ Failed to fetch MailHog messages');",
+                  "    console.log('🔄 Make sure MailHog is running at http://localhost:8025');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{mailHogUrl}}/api/v2/messages",
+              "host": ["{{mailHogUrl}}"],
+              "path": ["api", "v2", "messages"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Open MailHog Web UI",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('🌐 Opening MailHog Web UI...');",
+                  "console.log('📧 URL: http://localhost:8025');",
+                  "console.log('💡 Use this to view all captured emails and verification codes');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mailHogUrl}}/",
+              "host": ["{{mailHogUrl}}"],
+              "path": [""]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "authBridgeUrl",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "🔧 Auth-Bridge Service URL (COMPLETE AUTH SOLUTION)"
+    },
+    {
+      "key": "mailHogUrl",
+      "value": "http://localhost:8025",
+      "type": "string",
+      "description": "📧 MailHog Web UI URL"
+    },
+    {
+      "key": "phoneNumber",
+      "value": "+989203020409",
+      "type": "string",
+      "description": "📱 Test phone number (auto-generated on each run)"
+    },
+    {
+      "key": "email",
+      "value": "test@example.com",
+      "type": "string",
+      "description": "📧 Test email address (auto-generated on each run)"
+    },
+    {
+      "key": "registrationCode",
+      "value": "123456",
+      "type": "string",
+      "description": "🔢 AUTO-EXTRACTED from MailHog by Postman! ✅ Registration codes"
+    },
+    {
+      "key": "loginCode",
+      "value": "123456",
+      "type": "string",
+      "description": "🔢 AUTO-EXTRACTED from MailHog by Postman! ✅ Login codes"
+    },
+    {
+      "key": "2faCode",
+      "value": "123456",
+      "type": "string",
+      "description": "🔢 AUTO-EXTRACTED from MailHog by Postman! ✅ 2FA codes"
+    },
+    {
+      "key": "registrationId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during Auth-Bridge registration"
+    },
+    {
+      "key": "loginId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during Auth-Bridge login"
+    },
+    {
+      "key": "2faId",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set during Auth-Bridge 2FA"
+    },
+    {
+      "key": "authBridgeSessionToken",
+      "value": "",
+      "type": "string",
+      "description": "🔐 AUTO-SET by Auth-Bridge! ✅ Complete session token"
+    },
+    {
+      "key": "userRegistered",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set when user registration completes"
+    },
+    {
+      "key": "userLoggedIn",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set when user login completes"
+    },
+    {
+      "key": "user2faVerified",
+      "value": "",
+      "type": "string",
+      "description": "🔄 Auto-set when 2FA verification completes"
+    }
+  ]
+}

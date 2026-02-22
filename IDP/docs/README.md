@@ -45,7 +45,8 @@ Belderchin-IDP/
 │   ├── sms-service/        # 📱 SMS delivery service
 │   ├── kratos/             # 🆔 Identity management
 │   ├── hydra/              # 🔑 OAuth2/OIDC provider
-│   └── oathkeeper/         # 🛡️ API gateway
+│   ├── oathkeeper/         # 🛡️ API gateway
+│   └── postgres-init/      # 🗄️ Database initialization
 ├── sample-api/             # 🎯 Example protected API
 └── Belderchin-IDP.sln      # 📦 Solution file
 ```
@@ -74,6 +75,7 @@ Belderchin-IDP/
 - Postgres: persistence for Kratos and Hydra
 - `sms-service` (.NET): sends SMS via Kavenegar; can be used by Kratos courier/webhooks
 - `auth-bridge` (.NET): app-driven orchestration for SMS verification + 2FA (with email fallback)
+- `mailhog` (Docker): fake SMTP server for email testing and development
 - `sample-api` (.NET): demonstration API showing ORY authentication integration
 
 ## Prerequisites
@@ -98,6 +100,27 @@ dotnet run
 ```
 
 The sample API will be available at `https://localhost:5001/swagger` for testing authentication flows.
+
+## MailHog Email Testing
+
+MailHog is included for email testing during development:
+
+### Access MailHog
+- **Web UI**: `http://localhost:8025`
+- **SMTP Server**: `localhost:1025`
+
+### Features
+- Captures all emails sent by the system
+- Provides web interface to view emails
+- No real email delivery during development
+- Works with both Kratos and auth-bridge email sending
+
+### Email Testing Workflow
+1. Start the stack with Docker Compose
+2. Access MailHog UI at `http://localhost:8025`
+3. Trigger verification/2FA flows that use email fallback
+4. View captured emails in the MailHog interface
+5. Extract verification codes from email content
 
 ## Local Testing Setup
 
@@ -143,6 +166,8 @@ docker-compose logs kratos | grep "registration_code"
 | Oathkeeper | Admin API | `http://localhost:4456` | `http://localhost:4456/health/alive` |
 | SMS Service | API | `http://localhost:8081` | `http://localhost:8081/health` |
 | Auth Bridge | API | `http://localhost:8080` | `http://localhost:8080/health` |
+| MailHog | SMTP | `localhost:1025` | N/A |
+| MailHog | Web UI | `http://localhost:8025` | N/A |
 | Sample API | API | `http://localhost:5000` | `http://localhost:5000/health` |
 | PostgreSQL | Database | `localhost:5432` | N/A |
 

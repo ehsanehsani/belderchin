@@ -70,7 +70,8 @@ selfservice:
 
 courier:
   smtp:
-    connection_uri: smtp://test:test@localhost:1025
+    connection_uri: smtp://mailhog:1025?disable_starttls=true
+    from_address: noreply@belderchin.local
 
 feature_flags:
   use_continue_with_transitions: true

@@ -72,13 +72,13 @@ services:
     networks:
       - belderchin-idp
 
-  # mailhog:
-  #   image: docker.tapsifood.cloud/library/mailhog/mailhog:latest
-  #   ports:
-  #     - "1025:1025" # SMTP
-  #     - "8025:8025" # Web UI
-  #   networks:
-  #     - belderchin-idp
+  mailhog:
+    image: docker.tapsifood.cloud/library/mailhog/mailhog:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - belderchin-idp
 
   # auth-bridge and sms-service commented out for local debugging
   # auth-bridge:

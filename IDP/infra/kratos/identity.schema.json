@@ -22,10 +22,23 @@
               }
             }
           }
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email address",
+          "ory.sh/kratos": {
+            "credentials": {
+              "code": {
+                "identifier": true,
+                "via": "email"
+              }
+            }
+          }
         }
       },
       "required": ["phone"],
-      "additionalProperties": false
+      "additionalProperties": true
     }
   },
   "required": ["traits"],

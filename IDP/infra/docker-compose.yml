@@ -72,13 +72,13 @@ services:
     networks:
       - belderchin-idp
 
-  # mailhog:
-  #   image: docker.tapsifood.cloud/library/mailhog/mailhog:latest
-  #   ports:
-  #     - "1025:1025" # SMTP
-  #     - "8025:8025" # Web UI
-  #   networks:
-  #     - belderchin-idp
+  mailhog:
+    image: docker.tapsifood.cloud/library/mailhog/mailhog:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - belderchin-idp
 
   auth-bridge:
     build:
@@ -87,9 +87,15 @@ services:
       - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USERNAME: ""
+      SMTP_PASSWORD: ""
+      SMTP_FROM: noreply@belderchin.local
     depends_on:
       - kratos
       - hydra
+      - mailhog
     networks:
       - belderchin-idp
 
