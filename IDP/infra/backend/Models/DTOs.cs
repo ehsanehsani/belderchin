@@ -1,12 +1,14 @@
 namespace Backend.Models;
 
-// Request DTOs
-public class LoginRequest
+// Internal helper class for session user info
+public class SessionUserInfo
 {
-    public string PhoneNumber { get; set; } = string.Empty;
-    public string SessionToken { get; set; } = string.Empty; // From Auth-Bridge
+    public string? Id { get; set; }
+    public string Phone { get; set; } = string.Empty;
+    public string? Email { get; set; }
 }
 
+// Request DTOs
 public class CreateCourseRequest
 {
     public string Title { get; set; } = string.Empty;
@@ -44,12 +46,6 @@ public class UpdateProfileRequest
 }
 
 // Response DTOs
-public class LoginResponse
-{
-    public string Token { get; set; } = string.Empty;
-    public UserDto User { get; set; } = null!;
-}
-
 public class UserDto
 {
     public string Id { get; set; } = string.Empty;

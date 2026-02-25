@@ -31,10 +31,24 @@ public class UsersController : ControllerBase
         var user = await _memoryService.GetUserAsync(userId);
         if (user == null)
         {
-            return NotFound(new { message = "User not found" });
+            return NotFound(new { message = "User not found. Please complete authentication in Auth-Bridge first." });
         }
         
         var profile = await _memoryService.GetUserProfileAsync(userId);
+        if (profile == null)
+        {
+            // Create default profile if it doesn't exist
+            profile = new Backend.Models.UserProfile
+            {
+                UserId = userId,
+                DisplayName = user.PhoneNumber, // Use phone as default display name
+                Avatar = "",
+                Preferences = new Dictionary<string, object>(),
+                Statistics = new Backend.Models.UserStatistics(),
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
         
         return Ok(new
         {
@@ -79,6 +93,13 @@ public class UsersController : ControllerBase
         var userId = User.FindFirst("userId")?.Value;
         _logger.LogInformation("User {UserId} requested their progress", userId);
 
+        // Check if user exists in Auth-Bridge
+        var user = await _memoryService.GetUserAsync(userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found. Please complete authentication in Auth-Bridge first." });
+        }
+
         var progress = await _memoryService.GetUserProgressAsync(userId);
         
         return Ok(new
@@ -97,6 +118,13 @@ public class UsersController : ControllerBase
     {
         var userId = User.FindFirst("userId")?.Value;
         _logger.LogInformation("User {UserId} submitting progress for course {CourseId}", userId, courseId);
+
+        // Check if user exists in Auth-Bridge
+        var user = await _memoryService.GetUserAsync(userId);
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found. Please complete authentication in Auth-Bridge first." });
+        }
 
         var progress = await _memoryService.UpdateUserProgressAsync(userId, courseId, request.Answers, request.Score);
         

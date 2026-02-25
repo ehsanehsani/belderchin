@@ -7,6 +7,7 @@ using Couchbase.KeyValue;
 using Couchbase.Management.Collections;
 using Backend.Services;
 using Backend.Models;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,26 @@ var couchbaseUsername = configuration["Couchbase:Username"] ?? "admin";
 var couchbasePassword = configuration["Couchbase:Password"] ?? "password";
 var couchbaseBucketName = configuration["Couchbase:BucketName"] ?? "belderchin";
 
+// Redis Configuration
+var redisConnectionString = configuration["Redis:ConnectionString"] ?? "localhost:6379";
+
+// Register Redis as a singleton
+builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
+{
+    var options = ConfigurationOptions.Parse(redisConnectionString);
+    options.AbortOnConnectFail = false;
+    options.ConnectRetry = 3;
+    options.ConnectTimeout = 5000;
+    return ConnectionMultiplexer.Connect(options);
+});
+
+// Register IDatabase as a scoped service
+builder.Services.AddScoped<IDatabase>(provider =>
+{
+    var multiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
+    return multiplexer.GetDatabase();
+});
+
 // Register simple in-memory database for now (instead of Couchbase)
 var courses = new List<Course>();
 var questions = new Dictionary<string, List<Question>>();
@@ -72,9 +93,16 @@ builder.Services.AddSingleton<ISeedingService, SeedingService>();
 // Add Authorization policies
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("BackofficeOnly", policy => policy.RequireClaim("userType", "Backoffice"));
-    options.AddPolicy("RegularOnly", policy => policy.RequireClaim("userType", "Regular"));
-    options.AddPolicy("AuthenticatedOnly", policy => policy.RequireAuthenticatedUser());
+    options.AddPolicy("BackofficeOnly", policy => 
+        policy.RequireRole("Backoffice"));
+    options.AddPolicy("RegularOnly", policy => 
+        policy.RequireRole("Regular"));
+    options.AddPolicy("AdminOnly", policy => 
+        policy.RequireRole("Backoffice", "Admin"));
+    options.AddPolicy("ContentManager", policy => 
+        policy.RequireRole("Backoffice", "ContentManager", "Admin"));
+    options.AddPolicy("AuthenticatedOnly", policy => 
+        policy.RequireAuthenticatedUser());
 });
 
 // JWT Authentication

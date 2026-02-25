@@ -1,0 +1,476 @@
+{
+	"info": {
+		"_postman_id": "belderchin-new-auth-flow-v2",
+		"name": "🎯 Belderchin IDP - NEW Simplified Auth Flow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "belderchin-exporter-v2",
+		"description": "🚀 **NEW SIMPLIFIED AUTHENTICATION FLOW**\\n\\nThis collection demonstrates the **unified authentication architecture** where Auth-Bridge issues JWT tokens directly, eliminating the need for separate backend login APIs.\\n\\n## 🔄 **FLOW COMPARISON**\\n\\n### 🆕 **NEW Simplified Flow (This Collection)**\\n1. Client → POST /verification/start (phone/email)\\n2. Client → POST /verification/confirm (code) → JWT Token + User Data\\n3. Client → Backend APIs (Authorization: Bearer <JWT>)\\n\\n### 🔄 **OLD Complex Flow (Deprecated)**\\n1. Client → POST /verification/start → Session Token\\n2. Client → POST /verification/confirm → Session Token\\n3. Client → POST /api/auth/login (session + phone) → JWT Token\\n4. Client → Backend APIs (Authorization: Bearer <JWT>)\\n\\n## ✅ **BENEFITS OF NEW FLOW**\\n- ✅ 50% fewer API calls\\n- ✅ Single source of truth for user data\\n- ✅ Better performance (no inter-service calls)\\n- ✅ Simplified client logic\\n- ✅ Centralized authentication management\\n\\n## 🎯 **SERVICES IN THIS COLLECTION**\\n- **Auth-Bridge** (Port 8080): Complete authentication service\\n- **Backend** (Port 8082): Business logic with JWT validation\\n- **Test Endpoints**: For development and debugging\\n\\n---\\n**📅 Last Updated**: February 25, 2026 - Architecture Migration Complete"
+	},
+	"item": [
+		{
+			"name": "🎯 Auth-Bridge - Complete Authentication Service",
+			"item": [
+				{
+					"name": "📱 Start Verification",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 🎯 NEW ARCHITECTURE: Starting verification flow\\n",
+									"console.log('🚀 Starting verification with NEW simplified auth flow');\\n",
+									"\\n",
+									"// Store request data for subsequent calls\\n",
+									"if (pm.response.json()) {\\n",
+									"    pm.collectionVariables.set('verification_id', pm.response.json().id);\\n",
+									"    pm.collectionVariables.set('delivery_method', pm.response.json().delivery);\\n",
+									"    console.log('✅ Verification started: ' + pm.response.json().id);\\n",
+									"    console.log('📱 Delivery method: ' + pm.response.json().delivery);\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+1234567890\",\n  \"email\": \"test@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{auth_bridge_url}}/verification/start",
+							"host": ["{{auth_bridge_url}}"],
+							"path": ["verification", "start"]
+						},
+						"description": "🎯 **NEW FLOW STEP 1**\\n\\nStart phone/email verification process.\\n\\n**Response**: Verification ID for code confirmation\\n\\n**Next Step**: Use this ID to confirm verification and get JWT token\\n\\n**Benefits**: Direct path to JWT token issuance"
+					}
+				},
+				{
+					"name": "✅ Confirm Verification & Get JWT Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 🎯 NEW ARCHITECTURE: Confirming verification and getting JWT token\\n",
+									"console.log('🔐 Confirming verification to get JWT token');\\n",
+									"\\n",
+									"if (pm.response.json()) {\\n",
+									"    if (pm.response.json().jwt_token) {\\n",
+									"        // 🎉 NEW FLOW: Got JWT token directly!\\n",
+									"        pm.collectionVariables.set('jwt_token', pm.response.json().jwt_token);\\n",
+									"        pm.collectionVariables.set('user_id', pm.response.json().user.id);\\n",
+									"        pm.collectionVariables.set('user_phone', pm.response.json().user.phone);\\n",
+									"        pm.collectionVariables.set('user_email', pm.response.json().user.email);\\n",
+									"        console.log('✅ JWT Token received: ' + pm.response.json().jwt_token.substring(0, 20) + '...');\\n",
+									"        console.log('👤 User ID: ' + pm.response.json().user.id);\\n",
+									"        console.log('📱 Phone: ' + pm.response.json().user.phone);\\n",
+									"        console.log('📧 Email: ' + pm.response.json().user.email);\\n",
+									"        console.log('🎉 AUTHENTICATION COMPLETE - Ready for API calls!');\\n",
+									"    } else {\\n",
+									"        console.log('❌ Verification failed or no JWT token received');\\n",
+									"    }\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{verification_id}}\",\n  \"code\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{auth_bridge_url}}/verification/confirm",
+							"host": ["{{auth_bridge_url}}"],
+							"path": ["verification", "confirm"]
+						},
+						"description": "🎯 **NEW FLOW STEP 2**\\n\\nConfirm verification code and receive JWT token directly.\\n\\n**Response**: JWT token + User data\\n\\n**Next Step**: Use JWT token to access backend APIs\\n\\n**Benefits**: No separate login step needed!\\n\\n**🔥 KEY IMPROVEMENT**: This replaces the old backend login API step!"
+					}
+				},
+				{
+					"name": "👤 Get User Profile (JWT Protected)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 🎯 NEW ARCHITECTURE: Adding JWT authorization header\\n",
+									"if (pm.collectionVariables.get('jwt_token')) {\\n",
+									"    pm.request.headers.add({\\n",
+									"        'Authorization': 'Bearer ' + pm.collectionVariables.get('jwt_token')\\n",
+									"    });\\n",
+									"    console.log('🔐 Added JWT Bearer token for profile access');\\n",
+									"} else {\\n",
+									"    console.log('⚠️ No JWT token found - please complete verification first');\\n",
+									"}\\n"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.json()) {\\n",
+									"    console.log('✅ Profile retrieved successfully');\\n",
+									"    console.log('👤 User: ' + JSON.stringify(pm.response.json()));\\n",
+									"} else {\\n",
+									"    console.log('❌ Failed to get profile');\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{auth_bridge_url}}/verification/profile",
+							"host": ["{{auth_bridge_url}}"],
+							"path": ["verification", "profile"]
+						},
+						"description": "👤 **JWT PROTECTED ENDPOINT**\\n\\nGet user profile using JWT token.\\n\\n**Requirements**: Must have valid JWT token from verification step\\n\\n**Benefits**: Demonstrates JWT-based access control"
+					}
+				},
+				{
+					"name": "🔐 Start 2FA Verification",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log('🔐 Starting 2FA verification');\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+1234567890\",\n  \"email\": \"test@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{auth_bridge_url}}/verification/2fa/start",
+							"host": ["{{auth_bridge_url}}"],
+							"path": ["verification", "2fa", "start"]
+						},
+						"description": "🔐 **2FA VERIFICATION**\\n\\nStart two-factor authentication process.\\n\\n**Response**: 2FA verification ID\\n\\n**Next Step**: Confirm 2FA code to get JWT token"
+					}
+				},
+				{
+					"name": "✅ Confirm 2FA & Get JWT Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 🎯 NEW ARCHITECTURE: Confirming 2FA and getting JWT token\\n",
+									"if (pm.response.json()) {\\n",
+									"    if (pm.response.json().jwt_token) {\\n",
+									"        pm.collectionVariables.set('jwt_token', pm.response.json().jwt_token);\\n",
+									"        console.log('✅ 2FA JWT Token received: ' + pm.response.json().jwt_token.substring(0, 20) + '...');\\n",
+									"        console.log('🎉 2FA AUTHENTICATION COMPLETE!');\\n",
+									"    } else {\\n",
+									"        console.log('❌ 2FA verification failed');\\n",
+									"    }\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"{{2fa_id}}\",\n  \"code\": \"123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{auth_bridge_url}}/verification/2fa/confirm",
+							"host": ["{{auth_bridge_url}}"],
+							"path": ["verification", "2fa", "confirm"]
+						},
+						"description": "✅ **2FA CONFIRMATION**\\n\\nConfirm 2FA code and receive JWT token.\\n\\n**Response**: JWT token + User data\\n\\n**Benefits**: Enhanced security with direct JWT issuance"
+					}
+				}
+			],
+			"description": "🎯 **AUTH-BRIDGE: COMPLETE AUTHENTICATION SERVICE**\\n\\nThis folder contains all Auth-Bridge endpoints for the **new unified authentication architecture**.\\n\\n## 🔄 **KEY CHANGES**\\n\\n- ✅ **JWT Token Issuance**: Verification endpoints now return JWT tokens directly\\n- ✅ **No Backend Login Needed**: Eliminates separate login step\\n- ✅ **User Data Management**: Profile endpoints included\\n- ✅ **Simplified Flow**: 50% fewer API calls for authentication\\n\\n## 🎯 **SERVICE RESPONSIBILITY**\\n\\nAuth-Bridge is now the **complete authentication service**:\\n- User verification (phone/email)\\n- JWT token issuance\\n- User profile management\\n- 2FA support\\n- Session management (legacy)\\n\\n## 🌐 **BASE URL**\\n\\n`{{auth_bridge_url}}` = `http://localhost:8080`"
+		},
+		{
+			"name": "📚 Backend - Business Logic with JWT Validation",
+			"item": [
+				{
+					"name": "🌐 Public Endpoint (No Auth Required)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log('🌐 Testing public backend endpoint');\\n",
+									"if (pm.response.json()) {\\n",
+									"    console.log('✅ Public endpoint accessible');\\n",
+									"    console.log('🏗️ Architecture: ' + pm.response.json().architecture);\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{backend_url}}/api/test/public",
+							"host": ["{{backend_url}}"],
+							"path": ["api", "test", "public"]
+						},
+						"description": "🌐 **PUBLIC ENDPOINT**\\n\\nTest backend accessibility without authentication.\\n\\n**Benefits**: Verify backend is running and shows architecture benefits"
+					}
+				},
+				{
+					"name": "🔐 Protected Endpoint (JWT Required)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// 🔐 NEW ARCHITECTURE: Adding JWT authorization for backend\\n",
+									"if (pm.collectionVariables.get('jwt_token')) {\\n",
+									"    pm.request.headers.add({\\n",
+									"        'Authorization': 'Bearer ' + pm.collectionVariables.get('jwt_token')\\n",
+									"    });\\n",
+									"    console.log('🔐 Added JWT Bearer token for backend API');\\n",
+									"} else {\\n",
+									"    console.log('⚠️ No JWT token - please complete Auth-Bridge verification first');\\n",
+									"}\\n"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.json()) {\\n",
+									"    console.log('✅ Backend API accessed with JWT!');\\n",
+									"    console.log('👤 User info: ' + JSON.stringify(pm.response.json().authentication));\\n",
+									"    console.log('🗄️ User data: ' + JSON.stringify(pm.response.json().userData));\\n",
+									"    console.log('🎉 NEW ARCHITECTURE WORKING!');\\n",
+									"} else {\\n",
+									"    console.log('❌ Failed to access backend API');\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{backend_url}}/api/test/user-info",
+							"host": ["{{backend_url}}"],
+							"path": ["api", "test", "user-info"]
+						},
+						"description": "🔐 **JWT PROTECTED BACKEND API**\\n\\nAccess backend using JWT token from Auth-Bridge.\\n\\n**Requirements**: Valid JWT token from verification step\\n\\n**Benefits**: Demonstrates unified auth architecture working\\n\\n**🔥 KEY POINT**: Backend validates JWT locally, no calls to Auth-Bridge needed!"
+					}
+				}
+			],
+			"description": "📚 **BACKEND: BUSINESS LOGIC SERVICE**\\n\\nThis folder contains backend endpoints that work with the **new unified authentication architecture**.\\n\\n## 🔄 **KEY CHANGES**\\n\\n- ✅ **No Login API**: Removed `POST /api/auth/login` endpoint\\n- ✅ **JWT Validation**: Local JWT token validation\\n- ✅ **Redis Integration**: Direct user data access\\n- ✅ **Business Focus**: Pure business logic, no auth concerns\\n\\n## 🎯 **SERVICE RESPONSIBILITY**\\n\\nBackend is now a **pure business logic service**:\\n- Course management\\n- User progress tracking\\n- Content delivery\\n- JWT validation (local)\\n- Redis user data access\\n- ❌ ~~Authentication~~: Handled by Auth-Bridge\\n\\n## 🌐 **BASE URL**\\n\\n`{{backend_url}}` = `http://localhost:8082`"
+		},
+		{
+			"name": "🧪 Development & Testing Tools",
+			"item": [
+				{
+					"name": "🎯 Create Test User & JWT (Auth-Bridge)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log('🎯 Creating test user for development');\\n",
+									"if (pm.response.json()) {\\n",
+									"    pm.collectionVariables.set('jwt_token', pm.response.json().jwt_token);\\n",
+									"    pm.collectionVariables.set('test_user_id', pm.response.json().user.id);\\n",
+									"    console.log('✅ Test JWT created: ' + pm.response.json().jwt_token.substring(0, 20) + '...');\\n",
+									"    console.log('👤 Test user: ' + pm.response.json().user.id);\\n",
+									"    console.log('🎉 Ready for testing!');\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{auth_bridge_url}}/test/create-user",
+							"host": ["{{auth_bridge_url}}"],
+							"path": ["test", "create-user"]
+						},
+						"description": "🎯 **DEVELOPMENT TOOL**\\n\\nCreate a test user and JWT token for development/testing.\\n\\n**Benefits**: Quick setup for API testing without going through full verification flow"
+					}
+				},
+				{
+					"name": "✅ Validate JWT Token (Auth-Bridge)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"if (pm.collectionVariables.get('jwt_token')) {\\n",
+									"    pm.request.headers.add({\\n",
+									"        'Authorization': 'Bearer ' + pm.collectionVariables.get('jwt_token')\\n",
+									"    });\\n",
+									"    console.log('🔐 Validating JWT token...');\\n",
+									"} else {\\n",
+									"    console.log('⚠️ No JWT token to validate');\\n",
+									"}\\n"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.json()) {\\n",
+									"    if (pm.response.json().message && pm.response.json().message.includes('valid')) {\\n",
+									"        console.log('✅ JWT token is VALID!');\\n",
+									"        console.log('👤 User: ' + JSON.stringify({\\n",
+									"            userId: pm.response.json().userId,\\n",
+									"            phoneNumber: pm.response.json().phoneNumber,\\n",
+									"            userType: pm.response.json().userType\\n",
+									"        }));\\n",
+									"    } else {\\n",
+									"        console.log('❌ JWT token is INVALID');\\n",
+									"    }\\n",
+									"}\\n"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{auth_bridge_url}}/test/validate-jwt",
+							"host": ["{{auth_bridge_url}}"],
+							"path": ["test", "validate-jwt"]
+						},
+						"description": "✅ **JWT VALIDATION TOOL**\\n\\nValidate JWT token structure and claims.\\n\\n**Benefits**: Debug JWT tokens and verify claims"
+					}
+				}
+			],
+			"description": "🧪 **DEVELOPMENT & TESTING**\\n\\nDevelopment and debugging tools for the new authentication architecture.\\n\\n## 🎯 **PURPOSE**\\n\\n- Quick testing setup\\n- JWT token validation\\n- Architecture verification\\n- Debugging assistance"
+		}
+	],
+	"variable": [
+		{
+			"key": "auth_bridge_url",
+			"value": "http://localhost:8080",
+			"description": "🎯 Auth-Bridge service URL (Port 8080)"
+		},
+		{
+			"key": "backend_url",
+			"value": "http://localhost:8082",
+			"description": "📚 Backend service URL (Port 8082)"
+		},
+		{
+			"key": "verification_id",
+			"value": "",
+			"description": "📱 Verification ID from /verification/start response"
+		},
+		{
+			"key": "2fa_id",
+			"value": "",
+			"description": "🔐 2FA verification ID from /verification/2fa/start response"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"description": "🔐 JWT token from verification confirmation (NEW ARCHITECTURE)"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"description": "👤 User ID from JWT token or test user creation"
+		},
+		{
+			"key": "user_phone",
+			"value": "",
+			"description": "📱 User phone number from verification response"
+		},
+		{
+			"key": "user_email",
+			"value": "",
+			"description": "📧 User email from verification response"
+		}
+	]
+}

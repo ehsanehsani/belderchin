@@ -1,4 +1,6 @@
 using Backend.Models;
+using StackExchange.Redis;
+using System.Text.Json;
 
 namespace Backend.Services;
 
@@ -19,11 +21,15 @@ public interface IMemoryService
 
 public class MemoryService : IMemoryService
 {
+    private readonly IDatabase _redisDb;
     private static readonly List<Course> _courses = new();
     private static readonly Dictionary<string, List<Question>> _questions = new();
-    private static readonly Dictionary<string, User> _users = new();
-    private static readonly Dictionary<string, UserProfile> _userProfiles = new();
     private static readonly Dictionary<string, List<UserProgress>> _userProgress = new();
+
+    public MemoryService(IDatabase redisDb)
+    {
+        _redisDb = redisDb;
+    }
 
     public Task<List<CourseDto>> GetActiveCoursesAsync()
     {
@@ -77,21 +83,72 @@ public class MemoryService : IMemoryService
         return Task.FromResult(new List<QuestionDto>());
     }
 
-    public Task<User?> GetUserAsync(string userId)
+    public async Task<User?> GetUserAsync(string userId)
     {
-        _users.TryGetValue(userId, out var user);
-        return Task.FromResult(user);
+        try
+        {
+            var userDataJson = await _redisDb.StringGetAsync($"user:{userId}");
+            if (!userDataJson.HasValue)
+                return null;
+
+            var userData = JsonSerializer.Deserialize<JsonElement>(userDataJson.ToString());
+            
+            return new User
+            {
+                Id = userData.GetProperty("id").GetString() ?? userId,
+                PhoneNumber = userData.GetProperty("phone").GetString() ?? "",
+                UserType = userData.GetProperty("userType").GetString() == "Backoffice" ? UserType.Backoffice : UserType.Regular,
+                CreatedAt = userData.GetProperty("createdAt").GetDateTimeOffset().DateTime,
+                UpdatedAt = userData.GetProperty("updatedAt").GetDateTimeOffset().DateTime
+            };
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
-    public Task<User?> GetUserByPhoneNumberAsync(string phoneNumber)
+    public async Task<User?> GetUserByPhoneNumberAsync(string phoneNumber)
     {
-        var user = _users.Values.FirstOrDefault(u => u.PhoneNumber == phoneNumber);
-        return Task.FromResult(user);
+        try
+        {
+            // This is inefficient but works for now
+            // In a real implementation, you'd maintain a phone->userId index
+            var server = _redisDb.Multiplexer.GetServer(_redisDb.Multiplexer.GetEndPoints().First());
+            var keys = server.Keys(_redisDb.Database, "user:*");
+            
+            foreach (var key in keys)
+            {
+                var userDataJson = await _redisDb.StringGetAsync(key);
+                if (userDataJson.HasValue)
+                {
+                    var userData = JsonSerializer.Deserialize<JsonElement>(userDataJson.ToString());
+                    var phone = userData.GetProperty("phone").GetString();
+                    if (phone == phoneNumber)
+                    {
+                        return new User
+                        {
+                            Id = userData.GetProperty("id").GetString() ?? key.ToString().Replace("user:", ""),
+                            PhoneNumber = phone,
+                            UserType = userData.GetProperty("userType").GetString() == "Backoffice" ? UserType.Backoffice : UserType.Regular,
+                            CreatedAt = userData.GetProperty("createdAt").GetDateTimeOffset().DateTime,
+                            UpdatedAt = userData.GetProperty("updatedAt").GetDateTimeOffset().DateTime
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public Task CreateUserAsync(User user)
     {
-        _users[user.Id] = user;
+        // Users are created in Auth-Bridge, so this method is deprecated
+        // Keeping for backward compatibility but should not be used
         return Task.CompletedTask;
     }
 
@@ -158,38 +215,84 @@ public class MemoryService : IMemoryService
         return Task.FromResult(progressDto);
     }
 
-    public Task<UserProfile?> GetUserProfileAsync(string userId)
+    public async Task<UserProfile?> GetUserProfileAsync(string userId)
     {
-        _userProfiles.TryGetValue(userId, out var profile);
-        return Task.FromResult(profile);
+        try
+        {
+            var userDataJson = await _redisDb.StringGetAsync($"user:{userId}");
+            if (!userDataJson.HasValue)
+                return null;
+
+            var userData = JsonSerializer.Deserialize<JsonElement>(userDataJson.ToString());
+            
+            return new UserProfile
+            {
+                UserId = userId,
+                DisplayName = userData.GetProperty("displayName").GetString() ?? userId,
+                Avatar = userData.GetProperty("avatar").GetString() ?? "",
+                Preferences = JsonSerializer.Deserialize<Dictionary<string, object>>(userData.GetProperty("preferences").GetRawText()) ?? new Dictionary<string, object>(),
+                Statistics = new UserStatistics(),
+                CreatedAt = userData.GetProperty("createdAt").GetDateTimeOffset().DateTime,
+                UpdatedAt = userData.GetProperty("updatedAt").GetDateTimeOffset().DateTime
+            };
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
-    public Task<UserProfile> UpdateUserProfileAsync(string userId, UpdateProfileRequest request)
+    public async Task<UserProfile> UpdateUserProfileAsync(string userId, UpdateProfileRequest request)
     {
-        var profile = _userProfiles.TryGetValue(userId, out var existingProfile) ? existingProfile : new UserProfile
+        try
         {
-            UserId = userId,
-            DisplayName = request.DisplayName ?? userId,
-            Avatar = request.Avatar,
-            Preferences = request.Preferences ?? new Dictionary<string, object>(),
-            Statistics = new UserStatistics(),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-        
-        if (request.DisplayName != null)
-            profile.DisplayName = request.DisplayName;
-        
-        if (request.Avatar != null)
-            profile.Avatar = request.Avatar;
-        
-        if (request.Preferences != null)
-            profile.Preferences = request.Preferences;
-        
-        profile.UpdatedAt = DateTime.UtcNow;
-        _userProfiles[userId] = profile;
-        
-        return Task.FromResult(profile);
+            // Get existing user data from Redis
+            var userDataJson = await _redisDb.StringGetAsync($"user:{userId}");
+            if (!userDataJson.HasValue)
+            {
+                throw new KeyNotFoundException($"User {userId} not found");
+            }
+
+            var userData = JsonSerializer.Deserialize<Dictionary<string, object>>(userDataJson.ToString()) ?? new Dictionary<string, object>();
+            
+            // Update profile fields
+            if (!string.IsNullOrEmpty(request.DisplayName))
+                userData["displayName"] = request.DisplayName;
+            if (!string.IsNullOrEmpty(request.Avatar))
+                userData["avatar"] = request.Avatar;
+            if (request.Preferences != null)
+                userData["preferences"] = request.Preferences;
+            
+            userData["updatedAt"] = DateTimeOffset.UtcNow;
+
+            // Save back to Redis
+            await _redisDb.StringSetAsync($"user:{userId}", JsonSerializer.Serialize(userData), TimeSpan.FromDays(365));
+
+            return new UserProfile
+            {
+                UserId = userId,
+                DisplayName = request.DisplayName ?? userData["displayName"].ToString() ?? userId,
+                Avatar = request.Avatar ?? userData["avatar"].ToString() ?? "",
+                Preferences = request.Preferences ?? JsonSerializer.Deserialize<Dictionary<string, object>>(userData["preferences"].ToString()) ?? new Dictionary<string, object>(),
+                Statistics = new UserStatistics(),
+                CreatedAt = userData.ContainsKey("createdAt") ? DateTimeOffset.Parse(userData["createdAt"].ToString()).DateTime : DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
+        catch (Exception)
+        {
+            // Return default profile on error
+            return new UserProfile
+            {
+                UserId = userId,
+                DisplayName = request.DisplayName ?? userId,
+                Avatar = request.Avatar ?? "",
+                Preferences = request.Preferences ?? new Dictionary<string, object>(),
+                Statistics = new UserStatistics(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+        }
     }
 
     public Task<bool> IsHealthyAsync()

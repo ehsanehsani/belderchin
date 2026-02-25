@@ -135,6 +135,9 @@ services:
       SMTP_USERNAME: ""
       SMTP_PASSWORD: ""
       SMTP_FROM: noreply@belderchin.local
+      JWT_KEY: "belderchin-secret-key-1234567890-abcdefghijklmnopqrstuvwxyz-12"
+      JWT_ISSUER: "belderchin"
+      JWT_AUDIENCE: "belderchin-users"
     depends_on:
       - kratos
       - hydra
@@ -154,6 +157,10 @@ services:
       COUCHBASE_USERNAME: admin
       COUCHBASE_PASSWORD: password
       COUCHBASE_BUCKETNAME: belderchin
+      REDIS_CONNECTIONSTRING: redis:6379
+      JWT_KEY: "belderchin-secret-key-1234567890-abcdefghijklmnopqrstuvwxyz-12"
+      JWT_ISSUER: "belderchin"
+      JWT_AUDIENCE: "belderchin-users"
     depends_on:
       - couchbase
       - redis

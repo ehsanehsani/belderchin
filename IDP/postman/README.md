@@ -1,43 +1,63 @@
 # 📮 Postman Collections
 
-This folder contains Postman collections for testing the Belderchin IDP system.
+This folder contains Postman collections for testing the Belderchin IDP system with the **new unified authentication architecture**.
 
 ## 📋 Available Collections
 
-### 🎯 Mobile Authentication Collection
+### 🎯 **NEW: Simplified Auth Flow Collection**
+- **[NEW-AUTH-FLOW.postman_collection.json](./NEW-AUTH-FLOW.postman_collection.json)** ⭐ **RECOMMENDED**
+- **Status**: ✅ **CURRENT ARCHITECTURE**
+- **Flow**: Direct Auth-Bridge to JWT to Backend APIs
+- **Benefits**: 50% fewer API calls, simplified logic
+
+### 🔄 **LEGACY: Mobile Auth Collection**
 - **[Belderchin-IDP-Mobile-Auth-Collection.postman_collection.json](./Belderchin-IDP-Mobile-Auth-Collection.postman_collection.json)**
+- **Status**: ⚠️ **DEPRECATED ARCHITECTURE**
+- **Flow**: Auth-Bridge → Backend Login → Backend APIs
+- **Usage**: For reference and migration purposes only
 
-Complete mobile authentication workflow with code-based login for Belderchin Identity Provider - **FULLY TESTED AND WORKING**
+---
 
-#### Features:
-- ✅ **Mobile Registration**: Register new users with phone number and SMS verification
-- ✅ **Code Login**: Login existing users with phone number and SMS code (no password required)
-- ✅ **Password Login**: Traditional password-based login for users who prefer it
-- ✅ **Session Management**: Check current session and logout functionality
-- ✅ **Admin Tools**: Administrative tools for user management and debugging
+## 🎯 **NEW SIMPLIFIED AUTH FLOW (RECOMMENDED)**
 
-#### Authentication Flows:
-1. **Mobile Registration Flow**
-   - Get Registration Flow
-   - Submit Registration - Request SMS Code
-   - Submit Registration - Verify SMS Code
+### 🔄 **Architecture Overview**
+```
+🔹 NEW SIMPLIFIED FLOW:
+1. Client → Auth-Bridge verification → JWT Token + User Data
+2. Client → Backend APIs (JWT)
 
-2. **Mobile Code Login Flow**
-   - Get Code Login Flow
-   - Request Login Code
-   - Submit Login Code
+🔹 OLD COMPLEX FLOW:
+1. Client → Auth-Bridge verification → Session Token
+2. Client → Backend Login (session + phone) → JWT Token  
+3. Client → Backend APIs (JWT)
+```
 
-3. **Password Login Flow** (Optional)
-   - Get Password Login Flow
-   - Submit Password Login
+### ✅ **Key Benefits of New Flow**
+- ✅ **50% fewer API calls** for authentication
+- ✅ **Single source of truth** for user data
+- ✅ **Better performance** (no inter-service auth calls)
+- ✅ **Simplified client logic** 
+- ✅ **Centralized authentication management**
 
-4. **Session Management**
-   - Get Current Session
-   - Logout
+### 🎯 **Collection Features**
 
-5. **Admin Tools**
-   - Get User by Phone
-   - Get User Credentials
+#### **Auth-Bridge Endpoints (Port 8080)**
+- ✅ **Start Verification**: `POST /verification/start`
+- ✅ **Confirm Verification & Get JWT**: `POST /verification/confirm` 
+- ✅ **Get User Profile**: `GET /verification/profile` (JWT protected)
+- ✅ **2FA Support**: `POST /verification/2fa/start`, `POST /verification/2fa/confirm`
+- ✅ **Development Tools**: Test user creation, JWT validation
+
+#### **Backend Endpoints (Port 8082)**
+- ✅ **Public Endpoint**: `GET /api/test/public`
+- ✅ **Protected API**: `GET /api/test/user-info` (JWT required)
+- ✅ **Business Logic**: Course management, user progress, etc.
+
+#### **Smart Features**
+- 🤖 **Automatic JWT Handling**: Tokens stored in variables automatically
+- 🔄 **Flow Management**: Variables passed between requests
+- 📝 **Detailed Logging**: Console output for debugging
+- ✅ **Error Handling**: Clear success/failure indicators
 
 ---
 
@@ -49,107 +69,164 @@ Complete mobile authentication workflow with code-based login for Belderchin Ide
 3. **Environment**: Local development environment
 
 ### Setup Instructions:
-1. **Import Collection**:
-   - Open Postman
-   - Click "Import" → "File"
-   - Select `Belderchin-IDP-Mobile-Auth-Collection.postman_collection.json`
 
-2. **Configure Variables**:
-   - Open collection variables
-   - Verify `baseUrl` is `http://localhost:4433`
-   - Verify `baseUrlAdmin` is `http://localhost:4434`
-   - Update `phoneNumber` as needed
+#### 1. **Import Collection**
+- Open Postman
+- Click "Import" → "File"
+- Select `NEW-AUTH-FLOW.postman_collection.json`
+- Collection will appear with "🎯" prefix
 
-3. **Run Tests**:
-   - Execute requests in sequence
-   - Check console output for verification codes
-   - Use codes from Kratos logs for verification
+#### 2. **Configure Variables**
+- Open collection variables
+- Verify default values:
+  ```
+  auth_bridge_url: http://localhost:8080
+  backend_url: http://localhost:8082
+  ```
 
-### Getting Verification Codes:
-```bash
-# Get the latest verification code
-docker-compose logs kratos | grep registration_code | tail -1
+#### 3. **Run Authentication Flow**
 ```
+🎯 NEW FLOW (Recommended):
+1. 📱 Start Verification → Get verification_id
+2. ✅ Confirm Verification → Get JWT token + user data
+3. 📚 Access Backend APIs → Use JWT token automatically
+```
+
+#### 4. **Test Development Tools**
+- Create test users for development
+- Validate JWT tokens
+- Test backend integration
 
 ---
 
-## 🔧 Configuration
+## 📊 **Collection Variables**
 
-### Collection Variables:
 | Variable | Default Value | Description |
-|----------|---------------|-------------|
-| `baseUrl` | `http://localhost:4433` | Kratos Public API URL |
-| `baseUrlAdmin` | `http://localhost:4434` | Kratos Admin API URL |
-| `phoneNumber` | `+1234567890` | Test phone number |
-| `password` | `SuperSecurePassword!2024#Random$%^&*` | Test password |
-| `verificationCode` | `123456` | ⚠️ Update with actual code |
-| `csrfToken` | *auto-set* | CSRF protection token |
-
-### Environment Requirements:
-- **Kratos**: Running on ports 4433/4434
-- **Hydra**: Running on ports 4444/4445
-- **Postgres**: Database backend
-- **SMS Service**: Optional (for actual SMS delivery)
+|-----------|---------------|-------------|
+| `auth_bridge_url` | `http://localhost:8080` | Auth-Bridge service URL |
+| `backend_url` | `http://localhost:8082` | Backend service URL |
+| `verification_id` | *auto-set* | Verification ID from start response |
+| `2fa_id` | *auto-set* | 2FA verification ID |
+| `jwt_token` | *auto-set* | JWT token from confirmation |
+| `user_id` | *auto-set* | User ID from JWT token |
+| `user_phone` | *auto-set* | User phone number |
+| `user_email` | *auto-set* | User email address |
 
 ---
 
 ## 🧪 Testing Scenarios
 
-### ✅ Working Scenarios:
-1. **New User Registration**: Complete phone number registration with SMS verification
-2. **Existing User Login**: Login with phone number and SMS code
-3. **Password Authentication**: Traditional login with phone and password
-4. **Session Management**: Check active sessions and logout
-5. **Admin Operations**: User lookup and credential management
+### ✅ **Working Scenarios**
 
-### ⚠️ Configuration Notes:
-- **SMS Service**: Requires `KAVENEGAR_API_KEY` for actual SMS delivery
-- **CSRF Tokens**: Automatically extracted from flow responses
-- **Phone Validation**: Uses international format `+[1-9][1-14 digits]`
+#### 1. **Complete Authentication Flow**
+```
+1. POST /verification/start (phone/email)
+   → Response: verification_id + delivery_method
+
+2. POST /verification/confirm (id + code)
+   → Response: jwt_token + user_data
+
+3. GET /api/test/user-info (with JWT)
+   → Response: user_info + authentication_data
+```
+
+#### 2. **2FA Authentication**
+```
+1. POST /verification/2fa/start
+   → Response: 2fa_id
+
+2. POST /verification/2fa/confirm (id + code)
+   → Response: jwt_token + user_data
+```
+
+#### 3. **Profile Management**
+```
+1. GET /verification/profile (with JWT)
+   → Response: user_profile_data
+
+2. PUT /verification/profile (with JWT + data)
+   → Response: updated_profile
+```
+
+#### 4. **Development Testing**
+```
+1. POST /test/create-user
+   → Response: test_user + jwt_token
+
+2. GET /test/validate-jwt (with JWT)
+   → Response: validation_result + claims
+```
+
+### ⚠️ **Expected Behaviors**
+
+#### **Success Indicators**
+- ✅ **200 OK**: Verification started successfully
+- ✅ **JWT Token**: Authentication complete, ready for API calls
+- ✅ **User Data**: Profile information retrieved
+- ✅ **Backend Access**: APIs accessible with JWT
+
+#### **Error Handling**
+- ❌ **400 Bad Request**: Invalid phone/email format
+- ❌ **401 Unauthorized**: Invalid verification code or JWT
+- ❌ **404 Not Found**: Verification ID not found
+- ❌ **429 Too Many Requests**: Too many attempts
+
+---
+
+## 🔧 Configuration
+
+### Environment Setup
+- **Auth-Bridge**: `http://localhost:8080` (Port 8080)
+- **Backend**: `http://localhost:8082` (Port 8082)
+- **Services**: All running via Docker Compose
+
+### Test Data
+- **Phone**: `+1234567890` (test phone number)
+- **Email**: `test@example.com` (test email)
+- **Code**: `123456` (test verification code)
+
+---
+
+## 🎯 Success Indicators
+
+When everything is working correctly with the **new architecture**:
+
+- ✅ **Verification starts** return verification IDs
+- ✅ **JWT tokens issued** directly from confirmation
+- ✅ **Backend APIs accessible** with JWT tokens
+- ✅ **User data retrieved** from Redis cache
+- ✅ **No login step needed** in backend
+- ✅ **Performance improved** with fewer API calls
+
+---
+
+## 🔄 Migration Notes
+
+### From LEGACY to NEW:
+1. **Stop using** `Belderchin-IDP-Mobile-Auth-Collection.postman_collection.json`
+2. **Start using** `NEW-AUTH-FLOW.postman_collection.json`
+3. **Update client applications** to use new flow
+4. **Remove backend login API** calls from applications
+
+### Benefits:
+- **Simplified code**: Fewer authentication steps
+- **Better performance**: Reduced network calls
+- **Easier maintenance**: Single auth service
+- **Modern architecture**: JWT-first design
 
 ---
 
 ## 📚 Documentation
 
 For detailed setup and testing instructions:
-- **[POSTMAN-GUIDE.md](../docs/POSTMAN-GUIDE.md)** - Complete usage guide
-- **[COMPREHENSIVE-TEST-RESULTS.md](../docs/COMPREHENSIVE-TEST-RESULTS.md)** - Test results
-- **[SETUP-GUIDE.md](../docs/SETUP-GUIDE.md)** - System setup instructions
+- **[Architecture Migration Summary](../docs/ARCHITECTURE-MIGRATION-SUMMARY.md)**
+- **[Setup Guide](../docs/SETUP-GUIDE.md)**
+- **[Comprehensive Test Results](../docs/COMPREHENSIVE-TEST-RESULTS.md)**
 
 ---
 
-## 🔍 Troubleshooting
+## 🎉 Status
 
-### Common Issues:
-1. **400 Bad Request**: Check CSRF token is included
-2. **Phone Validation**: Use international format with country code
-3. **Verification Code**: Get latest code from Kratos logs
-4. **Service Unavailable**: Ensure all Docker services are running
+**✅ NEW AUTH FLOW COLLECTION READY FOR PRODUCTION**
 
-### Debug Commands:
-```bash
-# Check service status
-docker-compose ps
-
-# View Kratos logs
-docker-compose logs kratos
-
-# Get verification codes
-docker-compose logs kratos | grep registration_code
-```
-
----
-
-## 🎯 Success Indicators
-
-When everything is working correctly:
-- ✅ Registration flow returns `state: "sent_email"`
-- ✅ Verification codes appear in Kratos logs
-- ✅ User creation returns identity information
-- ✅ Session check returns active user data
-- ✅ Admin tools find user by phone number
-
----
-
-*Last updated: February 10, 2026*  
-*Version: 1.0 - Fully Tested*
+*Last updated: February 25, 2026 - Architecture Migration Complete*

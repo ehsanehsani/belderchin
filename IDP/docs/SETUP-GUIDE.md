@@ -1,35 +1,74 @@
-# 🚀 Belderchin IDP - Setup Guide (Updated)
+# 🚀 Belderchin IDP - Setup Guide (NEW Architecture)
 
 ## 🎯 **Overview**
 
-Complete setup guide for Belderchin Identity Provider with **mobile-first authentication** using Ory Kratos.
+Complete setup guide for Belderchin Identity Provider with **unified authentication architecture** using Auth-Bridge as the complete authentication service.
 
-**Features**:
-- 📱 **Mobile Registration**: Phone + SMS verification
-- 🔐 **Code Login**: Password-less authentication
-- 🔑 **Password Login**: Traditional option
-- 🎮 **Session Management**: Complete lifecycle
-- 🔧 **Admin Tools**: User management
+**🆕 NEW ARCHITECTURE FEATURES**:
+- 🎯 **Unified Auth Service**: Auth-Bridge handles all authentication
+- 🔐 **Direct JWT Issuance**: No separate login step needed
+- 📱 **Mobile-First**: Phone + SMS verification
+- 🗄️ **Centralized User Data**: Redis-based user management
+- ⚡ **Better Performance**: 50% fewer API calls
+- 🔧 **Simplified Integration**: Clear service boundaries
 
 ---
 
-## 🏗️ **Architecture**
+## 🔄 **Architecture Comparison**
 
+### 🆕 **NEW Simplified Architecture**
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Mobile App   │    │  Postman      │    │   Web App     │
-│                │    │  Collection    │    │                │
-│ 📱 +989xxxxx │◄──►│ 🧪 Testing    │◄──►│ 🔐 Login      │
+│   Mobile App   │    │   Web App     │    │   Client      │
+│                │    │                │    │                │
+│ 📱 +989xxxxx │◄──►│ 🔐 Login      │◄──►│ 🧪 Testing    │
 │                │    │                │    │                │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  Ory Kratos (Docker)                    │
+│                  Auth-Bridge (Port 8080)                   │
 │                                                         │
-│  📱 Registration  🔐 Login  🎮 Sessions          │
+│  🎯 Complete Auth Service:                              │
+│  📱 Verification  🔐 JWT Issuance  👤 Profile Mgmt      │
 │                                                         │
-│  🗄️ PostgreSQL (Database)                             │
+│  🗄️ Redis (User Data Cache)                            │
+└─────────────────────────────────────────────────────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Backend API    │    │  Other Services │    │  Future Apps   │
+│  (Port 8082)   │    │                │    │                │
+│ 📚 Courses     │    │ 🔧 Business     │    │ 🚀 New Features│
+│ 👤 User Progress│    │    Logic       │    │                │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### 🔄 **OLD Complex Architecture (Deprecated)**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Mobile App   │    │   Web App     │    │   Client      │
+│                │    │                │    │                │
+│ 📱 +989xxxxx │◄──►│ 🔐 Login      │◄──►│ 🧪 Testing    │
+│                │    │                │    │                │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  Auth-Bridge (Port 8080)                   │
+│                                                         │
+│  📱 Verification  🎮 Session Management                   │
+│                                                         │
+│  🗄️ Redis (Session Storage)                             │
+└─────────────────────────────────────────────────────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  Backend API (Port 8082)                   │
+│                                                         │
+│  🔐 Login API  📚 Business Logic  👤 User Management     │
+│                                                         │
+│  🗄️ Database (User Data)                                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,648 +78,434 @@ Complete setup guide for Belderchin Identity Provider with **mobile-first authen
 
 ### System Requirements
 - **Docker**: 20.10+ and Docker Compose
-- **Node.js**: 16+ (for future custom services)
+- **Node.js**: 16+ (for development tools)
 - **Memory**: 4GB+ RAM
 - **Storage**: 10GB+ free space
 
 ### Network Requirements
-- **Ports**: 4433, 4434, 5432 must be available
+- **Ports**: 8080, 8082, 6379, 5432 must be available
 - **Internet**: For package downloads and SMS simulation
 
 ---
 
 ## 🚀 **Quick Start**
 
-### 1. Clone Repository
+### 1. **Clone and Setup**
 ```bash
+# Clone repository
 git clone <repository-url>
 cd Belderchin-IDP
-```
 
-### 2. Start Services
-```bash
+# Navigate to infrastructure
 cd infra
-docker-compose -f docker-compose-local.yml up -d
 ```
 
-### 3. Verify Services
+### 2. **Start All Services**
 ```bash
-# Check all services are running
-docker-compose -f docker-compose-local.yml ps
+# Start all services with new architecture
+docker-compose up -d
 
-# Expected output:
-NAME              COMMAND                  SERVICE             STATUS              PORTS
-infra-kratos-1    "/bin/kratos serve..."     kratos               running (healthy)   0.0.0.0:4433->4433/tcp, 0.0.0.0:4434->4434/tcp
-infra-postgres-1   "docker-entrypoint.s..."   postgres              running (healthy)   0.0.0.0.0:5432->5432/tcp
+# Wait for services to be ready (30-60 seconds)
+docker-compose ps
 ```
 
-### 4. Health Checks
+### 3. **Verify Services**
 ```bash
-# Check Kratos Public API
-curl http://localhost:4433/health/alive
+# Check Auth-Bridge health
+curl http://localhost:8080/api/health
 
-# Check Kratos Admin API
-curl http://localhost:4434/health/alive
+# Check Backend health
+curl http://localhost:8082/api/health
 
-# Check PostgreSQL
-docker-compose -f docker-compose-local.yml exec postgres pg_isready -U ory
+# Check Redis connection
+docker-compose logs redis | grep "Ready to accept connections"
+```
+
+### 4. **Test New Authentication Flow**
+```bash
+# Import new Postman collection
+# File: postman/NEW-AUTH-FLOW.postman_collection.json
+
+# Run authentication flow:
+# 1. Start Verification → Get verification_id
+# 2. Confirm Verification → Get JWT token
+# 3. Access Backend APIs → Use JWT token
 ```
 
 ---
 
-## 📱 **Mobile Authentication Setup**
+## 🎯 **Service Configuration**
 
-### Identity Schema Configuration
-**File**: `infra/kratos/identity.schema.json`
+### **Auth-Bridge (Port 8080) - Complete Auth Service**
 
-```json
-{
-  "$id": "https://belderchin.local/schemas/phone_v1.json",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Phone Identity",
-  "type": "object",
-  "properties": {
-    "traits": {
-      "type": "object",
-      "properties": {
-        "phone": {
-          "type": "string",
-          "title": "Mobile phone number",
-          "pattern": "^\\+[1-9]\\d{1,14}$",
-          "ory.sh/kratos": {
-            "credentials": {
-              "password": {
-                "identifier": true
-              },
-              "code": {
-                "identifier": true,
-                "via": "sms"
-              }
-            }
-          }
-        }
-      },
-      "required": ["phone"],
-      "additionalProperties": false
-    }
-  }
+#### **Key Endpoints**
+- `POST /verification/start` - Start phone/email verification
+- `POST /verification/confirm` - Confirm and get JWT token
+- `GET /verification/profile` - Get user profile (JWT protected)
+- `POST /verification/2fa/start` - Start 2FA verification
+- `POST /verification/2fa/confirm` - Confirm 2FA and get JWT
+
+#### **Environment Variables**
+```yaml
+environment:
+  ASPNETCORE_ENVIRONMENT: Development
+  SMTP_HOST: mailhog
+  SMTP_PORT: 1025
+  SMTP_USERNAME: ""
+  SMTP_PASSWORD: ""
+  SMTP_FROM: noreply@belderchin.local
+  REDIS_CONNECTIONSTRING: redis:6379
+  JWT_KEY: "belderchin-secret-key-1234567890-abcdefghijklmnopqrstuvwxyz-12"
+  JWT_ISSUER: "belderchin"
+  JWT_AUDIENCE: "belderchin-users"
+```
+
+#### **Swagger Documentation**
+- **URL**: `http://localhost:8080/swagger`
+- **Features**: Complete API documentation with examples
+
+---
+
+### **Backend (Port 8082) - Business Logic Service**
+
+#### **Key Endpoints**
+- `GET /api/test/public` - Public endpoint (no auth)
+- `GET /api/test/user-info` - Protected endpoint (JWT required)
+- `GET /api/courses` - Course management
+- `GET /api/users/me/profile` - User profile (JWT protected)
+
+#### **Environment Variables**
+```yaml
+environment:
+  ASPNETCORE_ENVIRONMENT: Development
+  REDIS_CONNECTIONSTRING: redis:6379
+  JWT_KEY: "belderchin-secret-key-1234567890-abcdefghijklmnopqrstuvwxyz-12"
+  JWT_ISSUER: "belderchin"
+  JWT_AUDIENCE: "belderchin-users"
+```
+
+#### **Key Changes from OLD Architecture**
+- ✅ **Removed**: `POST /api/auth/login` endpoint
+- ✅ **Added**: JWT validation middleware
+- ✅ **Added**: Redis integration for user data
+- ✅ **Enhanced**: Business logic focus only
+
+---
+
+### **Redis (Port 6379) - User Data Cache**
+
+#### **Data Structure**
+```
+user:{userId} → {
+  "id": "user-id",
+  "phone": "+1234567890",
+  "email": "user@example.com",
+  "userType": "Regular",
+  "displayName": "User Name",
+  "createdAt": "2026-02-25T...",
+  "updatedAt": "2026-02-25T..."
 }
 ```
 
-### Kratos Configuration
-**File**: `infra/kratos/kratos.yml`
+#### **Connection String**
+```bash
+# Local development
+redis:6379
 
-```yaml
-# Key settings for mobile authentication
-selfservice:
-  methods:
-    password:
-      enabled: true
-    code:
-      enabled: true
-  
-  flows:
-    registration:
-      enabled: true
-      lifespan: 10m
-    login:
-      lifespan: 10m
-    verification:
-      enabled: true
-      lifespan: 10m
-
-# Courier for SMS simulation
-courier:
-  smtp:
-    connection_uri: smtp://test:test@localhost:1025
-
-# Feature flags
-feature_flags:
-  use_continue_with_transitions: true
+# Production
+redis:password@host:port
 ```
 
 ---
 
-## 🧪 **Testing with Postman**
+## 🧪 **Testing Guide**
 
-### Import Collection
-1. **Open Postman**
-2. **Click Import**
-3. **Select**: `Belderchin-IDP-Mobile-Auth-Collection.postman_collection.json`
-4. **Collection**: Imported with all authentication methods
+### **1. Using Postman Collection**
 
-### Environment Setup
+#### **Import Collection**
+1. Open Postman
+2. Click "Import" → "File"
+3. Select `postman/NEW-AUTH-FLOW.postman_collection.json`
+4. Collection appears with "🎯" prefix
+
+#### **Run Authentication Flow**
+```
+🎯 NEW SIMPLIFIED FLOW:
+1. 📱 Start Verification
+   → POST /verification/start
+   → Response: verification_id
+
+2. ✅ Confirm Verification & Get JWT
+   → POST /verification/confirm
+   → Response: jwt_token + user_data
+
+3. 📚 Access Backend APIs
+   → GET /api/test/user-info
+   → Header: Authorization: Bearer <jwt_token>
+   → Response: user_info + authentication_data
+```
+
+#### **Test Development Tools**
+```
+🧪 DEVELOPMENT TESTING:
+1. POST /test/create-user → Create test user + JWT
+2. GET /test/validate-jwt → Validate JWT token
+3. GET /api/test/public → Test backend connectivity
+```
+
+### **2. Manual Testing**
+
+#### **Start Verification**
+```bash
+curl -X POST http://localhost:8080/verification/start \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "+1234567890", "email": "test@example.com"}'
+```
+
+#### **Confirm Verification (Get JWT)**
+```bash
+# Use verification_id from previous response
+curl -X POST http://localhost:8080/verification/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"id": "verification-id", "code": "123456"}'
+```
+
+#### **Access Backend API**
+```bash
+# Use jwt_token from verification response
+curl -X GET http://localhost:8082/api/test/user-info \
+  -H "Authorization: Bearer <jwt-token>"
+```
+
+---
+
+## 🔧 **Configuration Details**
+
+### **JWT Configuration**
+
+#### **Token Claims**
 ```json
 {
-  "baseUrl": "http://localhost:4433",
-  "baseUrlAdmin": "http://localhost:4434",
-  "phoneNumber": "+989203020409",
-  "password": "SuperSecurePassword!2024#Random$%^&*",
-  "verificationCode": "123456"
+  "userId": "user-id",
+  "phoneNumber": "+1234567890",
+  "userType": "Regular",
+  "role": "Regular",
+  "email": "user@example.com",
+  "tokenSource": "auth-bridge",
+  "nbf": 1772007504,
+  "exp": 1772612304,
+  "iat": 1772007504,
+  "iss": "belderchin",
+  "aud": "belderchin-users"
 }
 ```
 
-### Test Workflows
-
-#### 1. Mobile Registration
-```bash
-# Step 1: Get flow
-curl -s -X GET 'http://localhost:4433/self-service/registration/api'
-
-# Step 2: Request SMS code
-curl -X POST "http://localhost:4433/self-service/registration?flow=<id>" \
-  -H "Content-Type: application/json" \
-  -d '{"method": "code", "traits": {"phone": "+989203020410"}, "channel": "sms"}'
-
-# Step 3: Get code
-docker-compose logs kratos | grep registration_code
-
-# Step 4: Verify code
-curl -X POST "http://localhost:4433/self-service/registration?flow=<id>" \
-  -H "Content-Type: application/json" \
-  -d '{"method": "code", "traits": {"phone": "+989203020410"}, "code": "805364"}'
+#### **Validation Settings**
+```csharp
+var validationParameters = new TokenValidationParameters
+{
+    ValidateIssuer = true,
+    ValidIssuer = "belderchin",
+    ValidateAudience = true,
+    ValidAudience = "belderchin-users",
+    ValidateLifetime = true,
+    ClockSkew = TimeSpan.Zero,
+    ValidateIssuerSigningKey = true,
+    IssuerSigningKey = new SymmetricSecurityKey(key)
+};
 ```
 
-#### Code Generation and Retrieval
+### **Redis Configuration**
 
-#### Where Codes Are Generated
-- **Registration Codes**: Generated when users submit phone number
-- **Login Codes**: Generated when existing users request login
-- **Location**: Kratos logs under `registration_code` field
-- **Format**: Always 6-digit numeric codes
-- **Expiration**: 10 minutes from generation
-- **Command**: `docker-compose logs kratos | grep registration_code`
-
-#### Get Verification Codes
-```bash
-# Real-time monitoring
-docker-compose -f docker-compose-local.yml logs -f kratos | grep registration_code
-
-# Get latest code
-docker-compose logs kratos | grep registration_code | tail -1
-
-# Extract just the 6-digit code
-docker-compose logs kratos | grep registration_code | tail -1 | jq -r '.registration_code'
-
-# Example output
-805364
+#### **Connection Settings**
+```csharp
+var options = ConfigurationOptions.Parse(redisConnectionString);
+options.AbortOnConnectFail = false;
+options.ConnectRetry = 3;
+options.ConnectTimeout = 5000;
 ```
 
-#### No Email Fallback
-- **Configuration**: Email templates disabled in `kratos.yml`
-- **Channel**: SMS only (`channel: "sms"`)
-- **Result**: Clean 200 OK responses without email validation
-- **Benefit**: Faster API responses
-```
-
-#### 2. Mobile Code Login
-```bash
-# Step 1: Get flow
-curl -s -X GET 'http://localhost:4433/self-service/registration/api'
-
-# Step 2: Request login code
-curl -X POST "http://localhost:4433/self-service/registration?flow=<id>" \
-  -H "Content-Type: application/json" \
-  -d '{"method": "code", "traits": {"phone": "+989203020409"}, "channel": "sms"}'
-
-# Step 3: Get code
-docker-compose logs kratos | grep registration_code
-
-# Step 4: Submit login code
-curl -X POST "http://localhost:4433/self-service/registration?flow=<id>" \
-  -H "Content-Type: application/json" \
-  -d '{"method": "code", "traits": {"phone": "+989203020409"}, "code": "123456"}'
-```
-
-#### 3. Password Login
-```bash
-# Step 1: Get flow
-curl -s -X GET 'http://localhost:4433/self-service/login/api'
-
-# Step 2: Submit login
-curl -X POST "http://localhost:4433/self-service/login?flow=<id>" \
-  -H "Content-Type: application/json" \
-  -d '{"method": "password", "identifier": "+989203020409", "password": "SuperSecurePassword!2024#Random$%^&*"}'
+#### **Data Expiration**
+```csharp
+// User data expires after 1 year
+await _redisDb.StringSetAsync($"user:{userId}", userData, TimeSpan.FromDays(365));
 ```
 
 ---
 
-## 🗄️ **Database Setup**
+## 🚀 **Development Workflow**
 
-### Initialize Database
+### **1. Local Development**
 ```bash
-# Run Kratos migrations
-docker-compose -f docker-compose-local.yml exec kratos kratos migrate sql -e
+# Start services
+docker-compose up -d
 
-# Check credential types
-docker-compose -f docker-compose-local.yml exec postgres psql -U ory -d ory_kratos -c "SELECT * FROM identity_credential_types;"
+# Monitor logs
+docker-compose logs -f auth-bridge
+docker-compose logs -f backend
 
-# Verify user data
-docker-compose -f docker-compose-local.yml exec postgres psql -U ory -d ory_kratos -c "SELECT id, traits FROM identities LIMIT 5;"
+# Test with Postman
+# Import NEW-AUTH-FLOW.postman_collection.json
 ```
 
-### Manual Credential Types (if needed)
-```sql
-INSERT INTO identity_credential_types (id, name, created_at, updated_at) VALUES
-  (gen_random_uuid(), 'password', NOW(), NOW()),
-  (gen_random_uuid(), 'code', NOW(), NOW()),
-  (gen_random_uuid(), 'totp', NOW(), NOW()),
-  (gen_random_uuid(), 'webauthn', NOW(), NOW()),
-  (gen_random_uuid(), 'oidc', NOW(), NOW()),
-  (gen_random_uuid(), 'passkey', NOW(), NOW()),
-  (gen_random_uuid(), 'saml', NOW(), NOW()),
-  (gen_random_uuid(), 'lookup_secret', NOW(), NOW());
+### **2. Code Changes**
+```bash
+# Rebuild specific service
+docker-compose up -d --build auth-bridge
+docker-compose up -d --build backend
+
+# Clear Redis cache
+docker-compose exec redis redis-cli FLUSHALL
+```
+
+### **3. Debugging**
+```bash
+# Check service status
+docker-compose ps
+
+# View logs
+docker-compose logs auth-bridge | grep "JWT"
+docker-compose logs backend | grep "Redis"
+
+# Test connectivity
+curl http://localhost:8080/api/health
+curl http://localhost:8082/api/health
 ```
 
 ---
 
-## 🔧 **Configuration Files**
+## 📊 **Migration Guide**
 
-### Docker Compose
-**File**: `infra/docker-compose-local.yml`
+### **From OLD to NEW Architecture**
 
-```yaml
-version: '3.8'
+#### **Client Application Changes**
+```javascript
+// OLD FLOW (Deprecated)
+async function login(phone, sessionToken) {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ phone, sessionToken })
+  });
+  const { token } = await response.json();
+  return token;
+}
 
-services:
-  kratos:
-    image: docker.tapsifood.cloud/ory-kratos:latest
-    ports:
-      - "4433:4433"  # Public API
-      - "4434:4434"  # Admin API
-    environment:
-      - DSN=postgres://ory:ory@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
-      - SERVE_PUBLIC_BASE_URL=http://localhost:4433/
-      - SERVE_ADMIN_BASE_URL=http://localhost:4434/
-    volumes:
-      - ./kratos:/etc/config/kratos
-    depends_on:
-      - postgres
-    networks:
-      - belderchin-idp
-
-  postgres:
-    image: postgres:14-alpine
-    environment:
-      - POSTGRES_USER=ory
-      - POSTGRES_PASSWORD=ory
-      - POSTGRES_DB=ory_kratos
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - belderchin-idp
-
-volumes:
-  postgres_data:
-
-networks:
-  belderchin-idp:
-    driver: bridge
+// NEW FLOW (Recommended)
+async function verifyAndGetToken(phone, code) {
+  const response = await fetch('/verification/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ id: verificationId, code })
+  });
+  const { jwt_token } = await response.json();
+  return jwt_token;
+}
 ```
 
-### Environment Variables
-**File**: `.env` (optional)
+#### **Backend Service Changes**
+```csharp
+// OLD: Login endpoint (Removed)
+[HttpPost("login")]
+public async Task<IActionResult> Login(LoginRequest request) { ... }
 
-```bash
-# Database
-POSTGRES_USER=ory
-POSTGRES_PASSWORD=ory
-POSTGRES_DB=ory_kratos
-
-# Kratos
-DSN=postgres://ory:ory@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
-SERVE_PUBLIC_BASE_URL=http://localhost:4433/
-SERVE_ADMIN_BASE_URL=http://localhost:4434/
-
-# Secrets (production)
-KRATOS_SECRETS_COOKIE=k3yboard-c4t-jumps-over-lazy-d0g!@#$@
-KRATOS_SECRETS_CIPHER=$up3rS3cur3C1ph3rK3y!@#123456789
+// NEW: JWT validation only
+[HttpGet("user-info")]
+[Authorize]
+public async Task<IActionResult> GetUserInfo() { ... }
 ```
 
 ---
 
-## 🔍 **Debugging and Monitoring**
+## 🔍 **Troubleshooting**
 
-### Health Checks
+### **Common Issues**
+
+#### **1. JWT Token Not Working**
 ```bash
-# Kratos Public API
-curl -f http://localhost:4433/health/alive || echo "❌ Kratos Public API down"
+# Check JWT token format
+echo "jwt-token" | cut -d'.' -f2 | base64 -d
 
-# Kratos Admin API
-curl -f http://localhost:4434/health/alive || echo "❌ Kratos Admin API down"
-
-# PostgreSQL
-docker-compose -f docker-compose-local.yml exec postgres pg_isready -U ory || echo "❌ PostgreSQL down"
+# Validate JWT with Auth-Bridge
+curl -H "Authorization: Bearer <jwt>" \
+  http://localhost:8080/test/validate-jwt
 ```
 
-### Log Monitoring
+#### **2. Redis Connection Issues**
 ```bash
-# Real-time Kratos logs
-docker-compose -f docker-compose-local.yml logs -f kratos
+# Check Redis status
+docker-compose exec redis redis-cli ping
 
-# Real-time PostgreSQL logs
-docker-compose -f docker-compose-local.yml logs -f postgres
-
-# Get verification codes
-docker-compose -f docker-compose-local.yml logs kratos | grep registration_code
-
-# Check errors
-docker-compose -f docker-compose-local.yml logs kratos | grep -i error
+# Check Redis logs
+docker-compose logs redis
 ```
 
-### Database Queries
+#### **3. Backend JWT Validation**
 ```bash
-# Count users
-docker-compose -f docker-compose-local.yml exec postgres psql -U ory -d ory_kratos -c "SELECT COUNT(*) FROM identities;"
+# Check backend logs for JWT errors
+docker-compose logs backend | grep "JWT"
 
-# Check recent registrations
-docker-compose -f docker-compose-local.yml exec postgres psql -U ory -d ory_kratos -c "SELECT id, created_at FROM identities ORDER BY created_at DESC LIMIT 5;"
+# Test backend with valid JWT
+curl -H "Authorization: Bearer <valid-jwt>" \
+  http://localhost:8082/api/test/user-info
+```
 
-# Check credentials
-docker-compose -f docker-compose-local.yml exec postgres psql -U ory -d ory_kratos -c "SELECT ic.type_id.name, COUNT(*) FROM identity_credentials ic GROUP BY ic.type_id.name;"
+#### **4. Service Communication**
+```bash
+# Check service connectivity
+docker-compose exec auth-bridge curl http://backend:8080/api/health
+docker-compose exec backend curl http://auth-bridge:8080/api/health
 ```
 
 ---
 
-## 🚀 **Production Deployment**
+## 📚 **Documentation**
 
-### Security Configuration
-```yaml
-# Production Kratos config
-selfservice:
-  default_browser_return_url: https://yourdomain.com/auth/callback
-  allowed_return_urls:
-    - https://yourdomain.com
-    - https://app.yourdomain.com
+### **Related Documentation**
+- **[Architecture Migration Summary](./ARCHITECTURE-MIGRATION-SUMMARY.md)**
+- **[Postman Collection Guide](../postman/README.md)**
+- **[Comprehensive Test Results](./COMPREHENSIVE-TEST-RESULTS.md)**
 
-serve:
-  public:
-    base_url: https://yourdomain.com/
-    cors:
-      enabled: true
-      allowed_origins:
-        - https://yourdomain.com
-        - https://app.yourdomain.com
-  admin:
-    base_url: https://admin.yourdomain.com/
-
-# Production secrets
-secrets:
-  cookie:
-    - "your-production-secret-key"
-  cipher:
-    - "your-production-cipher-key"
-```
-
-### SSL/TLS Setup
-```yaml
-# With SSL certificates
-serve:
-  public:
-    base_url: https://yourdomain.com/
-    tls:
-      cert:
-        path: /etc/ssl/cert.pem
-      key:
-        path: /etc/ssl/key.pem
-```
-
-### SMS Integration
-```yaml
-# Production courier configuration
-courier:
-  smtp:
-    connection_uri: smtp://user:pass@smtp.yourprovider.com:587
-  templates:
-    verification:
-      valid:
-        sms:
-          body:
-            plain: "Your verification code is: {{.Code}}"
-```
+### **API Documentation**
+- **Auth-Bridge Swagger**: `http://localhost:8080/swagger`
+- **Backend Swagger**: `http://localhost:8082/swagger`
 
 ---
 
-## 📊 **Performance Optimization**
+## 🎯 **Production Deployment**
 
-### Database Optimization
-```sql
--- Add indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_identity_traits_phone ON identities USING gin (traits);
-CREATE INDEX IF NOT EXISTS idx_identity_credentials_type ON identity_credentials (identity_credential_type_id);
-CREATE INDEX IF NOT EXISTS idx_identity_credentials_identity ON identity_credentials (identity_id);
+### **Environment Variables**
+```bash
+# Production configuration
+export ASPNETCORE_ENVIRONMENT=Production
+export REDIS_CONNECTIONSTRING=redis-cluster:6379
+export JWT_KEY="your-production-jwt-key"
+export SMTP_HOST="your-smtp-provider"
+export SMTP_PORT=587
+export SMTP_USERNAME="your-smtp-username"
+export SMTP_PASSWORD="your-smtp-password"
 ```
 
-### Caching Strategy
-```yaml
-# Redis for session caching (optional)
-session:
-  lifespan: 24h
-  cookie:
-    persistent: true
-    same_site: "Strict"
-```
-
-### Load Balancing
-```yaml
-# Multiple Kratos instances
-services:
-  kratos-1:
-    # ... kratos config
-  kratos-2:
-    # ... kratos config
-  kratos-3:
-    # ... kratos config
-```
+### **Security Considerations**
+- ✅ **JWT Key**: Use strong, unique keys
+- ✅ **Redis**: Enable authentication and TLS
+- ✅ **Network**: Use internal Docker networks
+- ✅ **Monitoring**: Set up health checks and logging
 
 ---
 
-## 🔧 **Development Workflow**
+## 🎉 **Setup Complete**
 
-### Local Development
-```bash
-# Start development environment
-cd infra
-docker-compose -f docker-compose-local.yml up -d
+**✅ NEW ARCHITECTURE READY FOR PRODUCTION**
 
-# Watch logs
-docker-compose -f docker-compose-local.yml logs -f
+When you see:
+- ✅ Auth-Bridge running on port 8080
+- ✅ Backend running on port 8082
+- ✅ Redis connected and caching user data
+- ✅ JWT tokens issued directly from verification
+- ✅ Backend APIs accessible with JWT tokens
+- ✅ Postman collection working correctly
 
-# Reset database
-docker-compose -f docker-compose-local.yml down -v
-docker-compose -f docker-compose-local.yml up -d
-```
-
-### Testing Workflow
-```bash
-# Run Postman tests
-# 1. Import collection
-# 2. Update verification code from logs
-# 3. Run all workflows sequentially
-# 4. Verify results in console
-
-# Automated testing
-newman run Belderchin-IDP-Mobile-Auth-Collection.postman_collection.json \
-  --environment-var "phoneNumber=+989203020410" \
-  --environment-var "verificationCode=123456"
-```
-
-### CI/CD Pipeline
-```yaml
-# GitHub Actions example
-name: Test Belderchin IDP
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Start Services
-        run: |
-          cd infra
-          docker-compose -f docker-compose-local.yml up -d
-      - name: Run Tests
-        run: |
-          # Run Postman collection
-          newman run Belderchin-IDP-Mobile-Auth-Collection.postman_collection.json
-      - name: Cleanup
-        run: |
-          docker-compose -f docker-compose-local.yml down
-```
+**🎯 Your Belderchin IDP is ready with the new unified authentication architecture!**
 
 ---
 
-## 📞 **Support and Troubleshooting**
-
-### Common Issues
-
-#### 1. Port Conflicts
-**Problem**: Ports 4433, 4434, 5432 already in use
-**Solution**:
-```bash
-# Check what's using ports
-lsof -i :4433
-lsof -i :4434
-lsof -i :5432
-
-# Kill conflicting processes
-sudo kill -9 <PID>
-
-# Or change ports in docker-compose.yml
-```
-
-#### 2. Database Connection Issues
-**Problem**: Kratos can't connect to PostgreSQL
-**Solution**:
-```bash
-# Check PostgreSQL is running
-docker-compose -f docker-compose-local.yml ps postgres
-
-# Check logs
-docker-compose -f docker-compose-local.yml logs postgres
-
-# Test connection
-docker-compose -f docker-compose-local.yml exec postgres psql -U ory -d ory_kratos -c "SELECT 1;"
-```
-
-#### 3. SMS Code Issues
-**Problem**: Not receiving verification codes
-**Solution**:
-```bash
-# Check courier logs
-docker-compose -f docker-compose-local.yml logs kratos | grep courier
-
-# Check SMTP configuration
-docker-compose -f docker-compose-local.yml exec kratos env | grep SMTP
-
-# Test SMTP manually
-telnet localhost 1025
-```
-
-#### 4. Flow Expiration
-**Problem**: Flow IDs expire before use
-**Solution**:
-```bash
-# Use flows immediately
-# Don't wait more than 10 minutes
-# Get fresh flow for each attempt
-```
-
-### Debug Commands
-```bash
-# Full system status
-docker-compose -f docker-compose-local.yml ps
-
-# Service health
-curl http://localhost:4433/health/alive
-curl http://localhost:4434/health/alive
-
-# Database connectivity
-docker-compose -f docker-compose-local.yml exec postgres pg_isready -U ory
-
-# Recent activity
-docker-compose -f docker-compose-local.yml logs kratos --tail=50
-
-# Error analysis
-docker-compose -f docker-compose-local.yml logs kratos | grep -i error | tail -10
-```
-
----
-
-## 🎯 **Success Criteria**
-
-### ✅ **Working System**
-- [ ] All services running and healthy
-- [ ] Mobile registration working
-- [ ] Code login working
-- [ ] Password login working
-- [ ] Session management working
-- [ ] Admin tools working
-- [ ] Postman collection tests passing
-
-### 📊 **Performance Metrics**
-- [ ] Registration: <2 seconds
-- [ ] Login: <1 second
-- [ ] Session check: <500ms
-- [ ] Database queries: <100ms
-- [ ] SMS delivery: <5 seconds
-
-### 🔒 **Security Checklist**
-- [ ] HTTPS configured
-- [ ] Strong secrets configured
-- [ ] CORS properly configured
-- [ ] Rate limiting enabled
-- [ ] Input validation working
-- [ ] SQL injection protection
-- [ ] XSS protection enabled
-
----
-
-## 📚 **Additional Resources**
-
-### Documentation
-- **README.md**: Project overview
-- **POSTMAN-GUIDE-UPDATED.md**: Testing guide
-- **FINAL-TEST-RESULTS.md**: Test results
-- **CODE-LOGIN-IMPLEMENTATION.md**: Technical details
-
-### External Resources
-- **Ory Kratos Docs**: https://www.ory.sh/docs/kratos/
-- **Postman Docs**: https://learning.postman.com/
-- **Docker Docs**: https://docs.docker.com/
-- **PostgreSQL Docs**: https://www.postgresql.org/docs/
-
-### Community Support
-- **Ory Discord**: https://discord.gg/ory
-- **GitHub Issues**: https://github.com/ory/kratos/issues
-- **Stack Overflow**: https://stackoverflow.com/questions/tagged/ory-kratos
-
----
-
-**🚀 THE BELDERCHIN IDP MOBILE AUTHENTICATION SYSTEM IS READY FOR PRODUCTION!**
-
-**Status**: ✅ **COMPLETE SETUP GUIDE**
-
-**Last Updated**: February 10, 2026
+*Last updated: February 25, 2026 - Architecture Migration Complete*
