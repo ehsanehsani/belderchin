@@ -1,0 +1,46 @@
+{
+  "$id": "https://belderchin.local/schemas/phone_v1.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Phone Identity",
+  "type": "object",
+  "properties": {
+    "traits": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "title": "Mobile phone number",
+          "pattern": "^\\+[1-9]\\d{1,14}$",
+          "ory.sh/kratos": {
+            "credentials": {
+              "password": {
+                "identifier": true
+              },
+              "code": {
+                "identifier": true,
+                "via": "sms"
+              }
+            }
+          }
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email address",
+          "ory.sh/kratos": {
+            "credentials": {
+              "code": {
+                "identifier": true,
+                "via": "email"
+              }
+            }
+          }
+        }
+      },
+      "required": ["phone"],
+      "additionalProperties": true
+    }
+  },
+  "required": ["traits"],
+  "additionalProperties": false
+}

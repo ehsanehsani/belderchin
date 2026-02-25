@@ -1,0 +1,42 @@
+serve:
+  proxy:
+    port: 4455
+    host: 0.0.0.0
+  api:
+    port: 4456
+    host: 0.0.0.0
+
+access_rules:
+  repositories:
+    - file:///etc/config/oathkeeper/access-rules.yml
+
+authenticators:
+  noop:
+    enabled: true
+  jwt:
+    enabled: true
+    config:
+      token_from:
+        header: Authorization
+      jwks_urls:
+        - http://hydra:4444/.well-known/jwks.json
+      scope_strategy: none
+
+authorizers:
+  allow:
+    enabled: true
+
+mutators:
+  noop:
+    enabled: true
+
+errors:
+  handlers:
+    json:
+      enabled: true
+      config:
+        verbose: true
+
+log:
+  level: info
+  format: text

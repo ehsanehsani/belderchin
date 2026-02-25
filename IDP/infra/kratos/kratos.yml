@@ -1,0 +1,85 @@
+dsn: postgres://ory:ory@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+
+serve:
+  public:
+    base_url: http://localhost:4433/
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://localhost:3000
+      allowed_methods:
+        - POST
+        - GET
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+        - Content-Type
+      exposed_headers:
+        - Content-Type
+      allow_credentials: true
+  admin:
+    base_url: http://localhost:4434/
+
+log:
+  level: info
+  format: json
+  leak_sensitive_values: true
+
+secrets:
+  cookie:
+    - "k3yboard-c4t-jumps-over-lazy-d0g!@#$@"
+  cipher:
+    - "$up3rS3cur3C1ph3rK3y!@#123456789"
+
+identity:
+  default_schema_id: phone_v1
+  schemas:
+    - id: phone_v1
+      url: file:///etc/config/kratos/identity.schema.json
+
+selfservice:
+  default_browser_return_url: http://localhost:3000/
+  allowed_return_urls:
+    - http://localhost:3000
+
+  methods:
+    password:
+      enabled: true
+    link:
+      enabled: false
+    code:
+      enabled: true
+      mfa_enabled: true
+    totp:
+      enabled: false
+
+  flows:
+    registration:
+      enabled: true
+      lifespan: 10m
+    verification:
+      enabled: true
+      lifespan: 10m
+    recovery:
+      enabled: true
+      lifespan: 10m
+    settings:
+      lifespan: 10m
+
+courier:
+  smtp:
+    connection_uri: smtp://mailhog:1025?disable_starttls=true
+    from_address: noreply@belderchin.local
+
+feature_flags:
+  use_continue_with_transitions: true
+
+session:
+  lifespan: 24h
+
+hashers:
+  algorithm: bcrypt
+  bcrypt:
+    cost: 12

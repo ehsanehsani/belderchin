@@ -1,0 +1,36 @@
+dsn: postgres://ory:ory@postgres:5432/ory_hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+
+serve:
+  public:
+    port: 4444
+    host: 0.0.0.0
+  admin:
+    port: 4445
+    host: 0.0.0.0
+
+urls:
+  self:
+    issuer: https://localhost:4444/
+  login: http://localhost:3001/login
+  consent: http://localhost:3001/consent
+
+oauth2:
+  expose_internal_errors: true
+  pkce:
+    enforced: true
+
+secrets:
+  system:
+    - "hydr4-syst3m-s3cr3t-k3y-!@#$%^&*()_+"
+
+oidc:
+  subject_identifiers:
+    supported_types:
+      - public
+    pairwise:
+      salt: "p@irw1se-salt-value-9876543210!@#$%"
+
+log:
+  level: info
+  format: json
+  leak_sensitive_values: false

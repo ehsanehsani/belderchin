@@ -1,0 +1,34 @@
+- id: hydra-public
+  upstream:
+    url: http://hydra:4444
+    preserve_host: true
+  match:
+    url: <http|https>://<.*>/(oauth2|\.well-known)/<.*>
+    methods:
+      - GET
+      - POST
+  authenticators:
+    - handler: noop
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: protected-api
+  upstream:
+    url: http://host.docker.internal:5000
+    preserve_host: true
+  match:
+    url: <http|https>://<.*>/api/<.*>
+    methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+  authenticators:
+    - handler: jwt
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
